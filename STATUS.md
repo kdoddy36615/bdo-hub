@@ -51,9 +51,9 @@
 ## TODO — Future Features
 
 ### High Priority
+- [ ] **Update Boss Schedule to Dec 2025 Patch** — PA overhauled the timetable on Dec 24, 2025. New bosses added: **Bulgasal, Uturi, Sangoon, Golden Pig King**. Max 2 simultaneous spawns per slot (down from 3-4). Schedule uses PST timezone with ~10 time slots per day. Our seed data (10 bosses) is outdated. Need to add new bosses to `bosses` table and update `spawn_schedule` JSON. Best source: BDO Alerts API or manual encode from official timetable image at `naeu.playblackdesert.com/en-US/Wiki?wikiNo=83`.
 - [ ] **Arsha.io Market Integration** — Add market price lookup for commonly needed items (enhancement mats, boss gear). API is free and confirmed working.
 - [ ] **Adventure Log / Family Buff Tracker** — Track permanent family-wide AP/DP from quests (Bartali's Log, Kama +1DP, O'dyllita +1AP, LoML, Kzarka kills). Static checklist with ~+10 AP / +10 DP total potential.
-- [ ] **Update Boss Schedule** — Verify current schedule against latest PA timetable. Consider fetching from BDO Alerts API for auto-updates.
 
 ### Medium Priority
 - [ ] **Grind Spot Reference** — Static dataset of popular grind spots with AP/DP requirements, region, estimated silver/hr
