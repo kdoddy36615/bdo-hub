@@ -107,16 +107,37 @@
 - **Our current implementation is correct** — static SpawnWindow data in Supabase is the right approach
 - When PA changes the schedule, just update the `bosses` table `spawn_schedule` column
 
-### Available APIs (NOT garmoth — they block scraping and TOS prohibits it)
+### Available APIs
 - **Arsha.io** (`api.arsha.io`) — Free, no auth, open-source Central Market data. Confirmed working. Items, prices, stock, trade volumes for NA/EU/KR.
 - **BDO Alerts** (`api.bdoalerts.net`) — Free API key (Discord application, 24-48h). Boss timers, market data, player profiles, news. 100 req/min, 5k/day.
 - **Pearl Abyss** — No official public API
 
-### Garmoth.com — DO NOT SCRAPE
-- Returns 403 on automated requests (bot protection)
-- TOS explicitly prohibits scraping, replication, or unauthorized API use
-- Potential legal consequences
-- Use legitimate alternatives (arsha.io, BDO Alerts, static data) instead
+### Garmoth.com — Architecture & API Findings
+**Architecture**: Split system — `garmoth.com` is Nuxt.js 3 (behind Cloudflare), `api.garmoth.com` is Laravel (NOT behind Cloudflare).
+
+**Public endpoints on `api.garmoth.com` (no auth required):**
+| Endpoint | Data |
+|----------|------|
+| `GET /api/grind-tracker/getGrindSpots` | 189 grind spots with AP/DP reqs, drops, monsters, nodes (~363KB) |
+| `GET /api/market?region=na` | Full Central Market — 4952 items with prices/stock (~2.2MB) |
+| `GET /api/imperial?region=na` | Imperial delivery crate data (~52KB) |
+| `GET /api/news?region=na` | BDO news feed, paginated |
+| `GET /api/events?region=na` | Active events |
+| `GET /api/coupons` | Active coupon codes with rewards |
+| `GET /api/item/tooltip?main_key={id}` | Single item tooltip (image, grade, price, stats) |
+| `GET /api/world-greater-boss?region=na` | Greater boss voting/history |
+| `GET /api/golden-pig-cave/status?region=na` | Golden Pig Cave open/closed + predictions |
+| `GET /api/guide/search?search={q}` | Search guides |
+| `GET /api/guide/post/{slug}` | Full guide content |
+
+**Still blocked:**
+- Boss timer schedule (`garmoth.com/api/boss-timer/table?region=na`) — behind Cloudflare, 403 for bots
+- User-specific data (grind tracker, builds) — requires auth
+- Frontend scraping — Cloudflare challenge page on `garmoth.com`
+
+**Regions**: `na`, `eu`, `sea`, `mena`, `kr`, `console_na`, `console_eu`, `ru`, `sa`, `asia`, `jp`, `tw`
+
+**TOS caveat**: These endpoints are unauthenticated and publicly accessible, but garmoth's `robots.txt` only allows `/$` and TOS prohibits unauthorized API use. Use at your own discretion — for personal use this is likely fine, but don't redistribute their data or hammer the API.
 
 ### BDO Foundry Map — Cannot Embed
 - Uses Leaflet.js with locally-hosted tiles
@@ -124,9 +145,9 @@
 - Best approach: link out with coordinates in URL hash (already implemented in dashboard links)
 
 ### Grind Spot Data
-- No legitimate public API for grind spot silver/hr data
-- Garmoth's grind tracker is unique — no open alternative
-- Options: maintain curated static dataset from community wikis, or just link to garmoth
+- ~~No legitimate public API for grind spot silver/hr data~~ **UPDATE**: `api.garmoth.com/api/grind-tracker/getGrindSpots` returns 189 spots with AP/DP, drops, monsters, and nodes — no auth required
+- Could fetch once and cache in Supabase, or fetch client-side on demand
+- Silver/hr estimates still require user's personal grind tracker data (auth-required)
 
 ---
 
@@ -149,6 +170,7 @@ These are bugs or correctness issues that will cause real problems as you use th
 - [ ] **Move `BossAltWithChar` to `types.ts`**.
 
 ### Sprint 3: New Features
+- [ ] **Grind Spot Reference** — Fetch from `api.garmoth.com/api/grind-tracker/getGrindSpots` (189 spots, AP/DP reqs, drops, monsters). Cache in Supabase or fetch on demand. No auth needed.
 - [ ] **Arsha.io Market Integration** — Add market price lookup for commonly needed items (enhancement mats, boss gear). API is free and confirmed working.
 - [ ] **Adventure Log / Family Buff Tracker** — Track permanent family-wide AP/DP from quests (Bartali's Log, Kama +1DP, O'dyllita +1AP, LoML, Kzarka kills). Static checklist with ~+10 AP / +10 DP total potential.
 - [ ] **Generate Supabase types** — `supabase gen types typescript` for compile-time schema safety.
@@ -160,7 +182,6 @@ These are bugs or correctness issues that will cause real problems as you use th
 - [ ] **Add DST edge case tests** for timer functions.
 
 ### Backlog
-- [ ] Grind Spot Reference (static dataset)
 - [ ] BDO Alerts API Integration (apply for key)
 - [ ] Curated Guide Links expansion
 - [ ] "System" theme (OS prefers-color-scheme)
