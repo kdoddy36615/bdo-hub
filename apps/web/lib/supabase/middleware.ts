@@ -6,6 +6,9 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
+  // Track cookies set during auth operations
+  const cookiesToForward: { name: string; value: string; options: Record<string, unknown> }[] = [];
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -21,9 +24,10 @@ export async function updateSession(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options);
+            cookiesToForward.push({ name, value, options: options as Record<string, unknown> });
+          });
         },
       },
     }
@@ -42,12 +46,10 @@ export async function updateSession(request: NextRequest) {
 
     if (!error) {
       // Redirect to the same page so the browser makes a new request
-      // with the session cookies set, allowing server components to read them.
-      const redirectUrl = request.nextUrl.clone();
-      const redirect = NextResponse.redirect(redirectUrl);
-      // Copy session cookies from supabaseResponse to the redirect response
-      supabaseResponse.cookies.getAll().forEach((cookie) => {
-        redirect.cookies.set(cookie.name, cookie.value);
+      // with the session cookies, allowing server components to read them.
+      const redirect = NextResponse.redirect(request.nextUrl.clone());
+      cookiesToForward.forEach(({ name, value, options }) => {
+        redirect.cookies.set(name, value, options);
       });
       return redirect;
     }
