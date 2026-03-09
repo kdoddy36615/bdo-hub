@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skull, UserPlus, CheckCircle, MapPin, XCircle, Trash2, Ghost, Timer } from "lucide-react";
+import { Skull, UserPlus, CheckCircle, MapPin, XCircle, Trash2, Ghost, Timer, ChevronRight, ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BOSS_PRIORITY_COLORS } from "@/lib/constants";
 import type { Boss, BossHistory } from "@/lib/types";
@@ -85,6 +85,91 @@ function formatSpawnTime(date: Date): string {
   });
 }
 
+function getPreviousSpawn(boss: Boss, now: Date): Date | null {
+  if (!boss.spawn_schedule || boss.spawn_schedule.length === 0) return null;
+
+  const candidates: Date[] = [];
+
+  for (const window of boss.spawn_schedule) {
+    for (const timeStr of window.times) {
+      const [hour, minute] = timeStr.split(":").map(Number);
+
+      for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+        const candidate = new Date(now);
+        candidate.setDate(candidate.getDate() - dayOffset);
+
+        const estNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+        const utcNow = new Date(now.toLocaleString("en-US", { timeZone: "UTC" }));
+        const estOffsetMs = utcNow.getTime() - estNow.getTime();
+
+        const estCandidate = new Date(candidate);
+        estCandidate.setHours(hour, minute, 0, 0);
+        const utcCandidate = new Date(estCandidate.getTime() + estOffsetMs);
+
+        const estDay = new Date(utcCandidate.toLocaleString("en-US", { timeZone: "America/New_York" }));
+        const dayOfWeek = estDay.getDay();
+
+        if (window.days.includes(dayOfWeek) && utcCandidate.getTime() < now.getTime()) {
+          candidates.push(utcCandidate);
+        }
+      }
+    }
+  }
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.getTime() - a.getTime());
+  return candidates[0];
+}
+
+interface SpawnGroup {
+  time: Date;
+  bosses: Boss[];
+}
+
+function getSpawnGroups(bosses: Boss[], now: Date, direction: "next" | "previous"): SpawnGroup[] {
+  const entries: { boss: Boss; time: Date }[] = [];
+
+  for (const boss of bosses) {
+    const time = direction === "next" ? getNextSpawn(boss, now) : getPreviousSpawn(boss, now);
+    if (time) entries.push({ boss, time });
+  }
+
+  entries.sort((a, b) =>
+    direction === "next"
+      ? a.time.getTime() - b.time.getTime()
+      : b.time.getTime() - a.time.getTime()
+  );
+
+  // Group bosses spawning within 5 minutes of each other
+  const groups: SpawnGroup[] = [];
+  for (const entry of entries) {
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && Math.abs(entry.time.getTime() - lastGroup.time.getTime()) < 5 * 60 * 1000) {
+      lastGroup.bosses.push(entry.boss);
+    } else {
+      groups.push({ time: entry.time, bosses: [entry.boss] });
+    }
+  }
+
+  return groups;
+}
+
+function formatTimeSince(target: Date, now: Date): string {
+  const diff = now.getTime() - target.getTime();
+  if (diff <= 0) return "Just now";
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return `${days}d ${remHours}h ago`;
+  }
+
+  return `${hours}h ${minutes}m ago`;
+}
+
 interface BossAltWithChar {
   id: string;
   boss_id: string;
@@ -113,6 +198,11 @@ export function BossesContent() {
   const { bosses, bossAlts, characters, history } = data;
   const [assignOpen, setAssignOpen] = useState<string | null>(null);
   const [spawnTimers, setSpawnTimers] = useState<Record<string, { countdown: string; time: string } | null>>({});
+  const [heroData, setHeroData] = useState<{
+    previous: { names: string; countdown: string; time: string } | null;
+    next: { names: string; countdown: string; time: string } | null;
+    followedBy: { names: string; countdown: string; time: string } | null;
+  }>({ previous: null, next: null, followedBy: null });
 
   useEffect(() => {
     function updateSpawnTimers() {
@@ -130,10 +220,38 @@ export function BossesContent() {
         }
       }
       setSpawnTimers(timers);
+
+      // Compute hero spawn groups
+      const nextGroups = getSpawnGroups(bosses, now, "next");
+      const prevGroups = getSpawnGroups(bosses, now, "previous");
+
+      setHeroData({
+        previous: prevGroups[0]
+          ? {
+              names: prevGroups[0].bosses.map((b) => b.name).join(" | "),
+              countdown: formatTimeSince(prevGroups[0].time, now),
+              time: formatSpawnTime(prevGroups[0].time),
+            }
+          : null,
+        next: nextGroups[0]
+          ? {
+              names: nextGroups[0].bosses.map((b) => b.name).join(" | "),
+              countdown: formatSpawnCountdown(nextGroups[0].time, now),
+              time: formatSpawnTime(nextGroups[0].time),
+            }
+          : null,
+        followedBy: nextGroups[1]
+          ? {
+              names: nextGroups[1].bosses.map((b) => b.name).join(" | "),
+              countdown: formatSpawnCountdown(nextGroups[1].time, now),
+              time: formatSpawnTime(nextGroups[1].time),
+            }
+          : null,
+      });
     }
 
     updateSpawnTimers();
-    const interval = setInterval(updateSpawnTimers, 60000); // Update every minute
+    const interval = setInterval(updateSpawnTimers, 60000);
     return () => clearInterval(interval);
   }, [bosses]);
 
@@ -215,6 +333,65 @@ export function BossesContent() {
         <h1 className="text-3xl font-bold">Boss Tracker</h1>
         <p className="text-muted-foreground">Track world boss spawns and attendance</p>
       </div>
+
+      {/* Next Boss Hero */}
+      {(heroData.previous || heroData.next || heroData.followedBy) && (
+        <Card>
+          <CardContent className="grid grid-cols-3 gap-4 p-4 md:p-6">
+            {/* Previous Boss */}
+            <div className="flex flex-col items-center gap-1 text-center">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <ChevronLeft className="mr-0.5 inline h-3 w-3" />Previous
+              </p>
+              {heroData.previous ? (
+                <>
+                  <p className="text-lg font-semibold text-muted-foreground/70 md:text-xl">
+                    {heroData.previous.countdown}
+                  </p>
+                  <p className="text-sm font-medium">{heroData.previous.names}</p>
+                  <p className="text-xs text-muted-foreground">{heroData.previous.time} EST</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">—</p>
+              )}
+            </div>
+
+            {/* Next Boss */}
+            <div className="flex flex-col items-center gap-1 text-center">
+              <p className="text-xs font-bold uppercase tracking-wide">Next Boss</p>
+              {heroData.next ? (
+                <>
+                  <p className="text-2xl font-bold text-primary md:text-3xl">
+                    {heroData.next.countdown}
+                  </p>
+                  <p className="text-sm font-semibold">{heroData.next.names}</p>
+                  <p className="text-xs text-muted-foreground">{heroData.next.time} EST</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No schedule data</p>
+              )}
+            </div>
+
+            {/* Followed By */}
+            <div className="flex flex-col items-center gap-1 text-center">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Followed By<ChevronRight className="ml-0.5 inline h-3 w-3" />
+              </p>
+              {heroData.followedBy ? (
+                <>
+                  <p className="text-lg font-semibold text-muted-foreground/70 md:text-xl">
+                    {heroData.followedBy.countdown}
+                  </p>
+                  <p className="text-sm font-medium">{heroData.followedBy.names}</p>
+                  <p className="text-xs text-muted-foreground">{heroData.followedBy.time} EST</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">—</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="schedule">
         <TabsList>

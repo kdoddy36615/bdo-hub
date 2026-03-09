@@ -1,64 +1,72 @@
-# Theme System — STATUS
+# BDO Hub — STATUS
 
 ## Completed
 
-### 12-Theme System (Full Implementation)
+### 12-Theme System
+- 12 themes (6 dark, 6 light) with CSS variables in oklch color space
+- Theme selector in header (Dialog-based), full grid in Settings page
+- Persisted to localStorage with flash prevention and migration from old key
+- See `apps/web/lib/themes.ts` for theme metadata
 
-**Theme Infrastructure:**
-- `apps/web/lib/themes.ts` — Theme metadata: 12 themes (6 dark, 6 light) with IDs, names, mode flags, and hex preview colors
-- `apps/web/components/theme-provider.tsx` — Rewritten for named themes. Uses `data-theme` attribute + `dark` class. Persists to `localStorage` with key `bdo-theme`. Migrates old `theme` key automatically.
-- `apps/web/components/theme-selector.tsx` — DropdownMenu-based theme picker with color swatch previews, organized by dark/light sections
-- `apps/web/app/globals.css` — CSS variable blocks for all 10 custom themes (midnight/dawn use existing `:root`/`.dark`). All variables use oklch color space.
+### Boss Timer "Next Boss" Hero
+- Added Previous / Next / Followed By spawn display at top of Boss Tracker page
+- Groups bosses spawning at the same time (within 5min window)
+- Shows countdown + boss names + spawn time in EST
+- Reuses existing spawn schedule data from Supabase
 
-**Themes Available:**
+### Dashboard Resource Links
+- Added: Garmoth Boss Timer, BDO Foundry Map, AP/DP Increase Quests, Weight Limit Guide, Arsha.io Market
+- Reorganized link order by usefulness
 
-| Theme | Mode | Hue | Description |
-|-------|------|-----|-------------|
-| Midnight | Dark | Neutral | Default dark, grey tones |
-| Crimson | Dark | Red (25) | Warm red accents |
-| Ocean | Dark | Blue (250) | Cool deep-sea blue |
-| Forest | Dark | Green (150) | Emerald green tones |
-| Violet | Dark | Purple (300) | Mystical purple |
-| OLED Black | Dark | Neutral | Pure black, max contrast |
-| Dawn | Light | Neutral | Default light, clean white |
-| Rose | Light | Pink (350) | Soft pink accents |
-| Amber | Light | Gold (75) | Warm amber/gold |
-| Sage | Light | Green (155) | Soft sage green |
-| Nord | Light | Blue (250) | Cool blue-grey |
-| Sand | Light | Tan (60) | Warm earthy tones |
+## Research Findings — Garmoth / External Data Integration
 
-**UI Integration:**
-- Theme selector added to app header (top-right palette icon)
-- Old dark/light toggle removed from sidebar footer
-- Settings page has full theme grid with swatch previews
-- Flash prevention script in root layout updated for named themes with old → new migration
+### Boss Timer Data
+- **Boss schedules are STATIC** — Pearl Abyss publishes a fixed weekly timetable that changes a few times per year
+- Sites like garmoth.com are just countdown clocks based on the known schedule
+- Events can temporarily alter schedules (announced via patch notes)
+- **Our current implementation is correct** — static SpawnWindow data in Supabase is the right approach
+- When PA changes the schedule, just update the `bosses` table `spawn_schedule` column
 
-**Files Changed:**
-- `apps/web/lib/themes.ts` (NEW)
-- `apps/web/components/theme-selector.tsx` (NEW)
-- `apps/web/components/theme-provider.tsx` (rewritten)
-- `apps/web/app/globals.css` (10 theme blocks added)
-- `apps/web/components/layout/app-sidebar.tsx` (removed toggle, cleaned imports)
-- `apps/web/app/(app)/layout.tsx` (added ThemeSelector to header)
-- `apps/web/app/layout.tsx` (updated flash prevention script)
-- `apps/web/app/(app)/settings/settings-content.tsx` (new theme picker grid)
+### Available APIs (NOT garmoth — they block scraping and TOS prohibits it)
+- **Arsha.io** (`api.arsha.io`) — Free, no auth, open-source Central Market data. Confirmed working. Items, prices, stock, trade volumes for NA/EU/KR.
+- **BDO Alerts** (`api.bdoalerts.net`) — Free API key (Discord application, 24-48h). Boss timers, market data, player profiles, news. 100 req/min, 5k/day.
+- **Pearl Abyss** — No official public API
 
-**Verification:**
-- TypeScript: clean (0 errors)
-- Build: passes
-- Tests: 19/19 pass
-- All existing pages/components work with themes (they consume CSS variables, no hardcoded colors to fix)
+### Garmoth.com — DO NOT SCRAPE
+- Returns 403 on automated requests (bot protection)
+- TOS explicitly prohibits scraping, replication, or unauthorized API use
+- Potential legal consequences
+- Use legitimate alternatives (arsha.io, BDO Alerts, static data) instead
 
-## Accessibility Notes
-- All themes maintain WCAG AA contrast ratios (foreground L=0.985 vs background L=0.145 for dark; foreground L=0.18-0.22 vs background L=0.97-0.98 for light)
-- Primary colors chosen for sufficient contrast as both text-on-background and background-with-white-text
-- Theme selector is keyboard-accessible via DropdownMenu
-- `sr-only` label on theme button for screen readers
+### BDO Foundry Map — Cannot Embed
+- Uses Leaflet.js with locally-hosted tiles
+- `X-Frame-Options: SAMEORIGIN` blocks iframe embedding
+- Best approach: link out with coordinates in URL hash (already implemented in dashboard links)
 
-## TODO — Future Refinements
-- [ ] Add "System" option that follows OS prefers-color-scheme
-- [ ] Add theme transition animation (smooth CSS transition on variable changes)
-- [ ] Consider per-chart theme-aware color palettes for better data viz
-- [ ] Add theme preview tooltip on hover
-- [ ] Store theme preference in Supabase user_settings (currently localStorage only)
-- [ ] Add keyboard shortcut for quick theme cycling (e.g., Ctrl+Shift+T)
+### Grind Spot Data
+- No legitimate public API for grind spot silver/hr data
+- Garmoth's grind tracker is unique — no open alternative
+- Options: maintain curated static dataset from community wikis, or just link to garmoth
+
+## TODO — Future Features
+
+### High Priority
+- [ ] **Arsha.io Market Integration** — Add market price lookup for commonly needed items (enhancement mats, boss gear). API is free and confirmed working.
+- [ ] **Adventure Log / Family Buff Tracker** — Track permanent family-wide AP/DP from quests (Bartali's Log, Kama +1DP, O'dyllita +1AP, LoML, Kzarka kills). Static checklist with ~+10 AP / +10 DP total potential.
+- [ ] **Update Boss Schedule** — Verify current schedule against latest PA timetable. Consider fetching from BDO Alerts API for auto-updates.
+
+### Medium Priority
+- [ ] **Grind Spot Reference** — Static dataset of popular grind spots with AP/DP requirements, region, estimated silver/hr
+- [ ] **BDO Alerts API Integration** — Apply for free API key, integrate boss timer auto-updates and market data
+- [ ] **Curated Guide Links** — Expand resources with more community guides (gear upgrade paths, lifeskill guides)
+
+### Low Priority / Theme System
+- [ ] Add "System" theme option (follows OS prefers-color-scheme)
+- [ ] Theme transition animation
+- [ ] Store theme preference in Supabase user_settings
+- [ ] Per-chart theme-aware color palettes
+
+### Not Feasible
+- Scraping garmoth.com (blocked + TOS)
+- Embedding BDO Foundry map (X-Frame-Options blocks it)
+- Pearl Abyss official API (doesn't exist)

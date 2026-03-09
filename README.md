@@ -8,13 +8,13 @@ Personal Black Desert Online progression dashboard.
 - **Characters** -- Manage your character roster with class, level, and gear details.
 - **Progression** -- Track long-term goals like gear enhancement milestones and skill levels.
 - **Activities** -- Log daily and weekly activities such as quests, grinding, and lifeskills.
-- **Bosses** -- Monitor world boss schedules and track your loot history.
+- **Bosses** -- Monitor world boss schedules with "Next Boss" hero display, spawn countdowns, and attendance tracking.
 - **Playbooks** -- Save and share step-by-step guides for grind rotations, enhancing, and more.
 - **Resources** -- Catalog materials, recipes, and other in-game resource references.
 - **Gathering** -- Plan gathering routes and track node empire output.
 - **Storage** -- Keep an inventory of items across town storages and the central market.
 - **Mentor Q&A** -- AI-powered assistant for answering BDO gameplay questions.
-- **Settings** -- Configure account preferences, themes, and notification options.
+- **Settings** -- Configure account preferences and choose from 12 visual themes (6 dark, 6 light).
 
 ## Tech Stack
 

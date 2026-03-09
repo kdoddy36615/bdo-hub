@@ -17,12 +17,16 @@ import type { Character, ProgressionItem, Activity, ActivityCompletion, Boss } f
 
 const BDO_LINKS = [
   { name: "BDO Official News", url: "https://www.naeu.playblackdesert.com/en-US/News/Notice", description: "Patch notes & announcements" },
+  { name: "Garmoth Boss Timer", url: "https://garmoth.com/boss-timer", description: "Live boss spawn countdowns" },
   { name: "Garmoth Gear Planner", url: "https://garmoth.com/gear-planner", description: "Plan and optimize your gear builds" },
   { name: "Garmoth Grind Tracker", url: "https://garmoth.com/grind-tracker", description: "Track grind sessions and silver/hr" },
-  { name: "Garmoth Market", url: "https://garmoth.com/market", description: "Market prices and alerts" },
+  { name: "BDO Foundry Map", url: "https://www.blackdesertfoundry.com/map/#4/-8.89/-25.22", description: "Interactive world map with nodes & NPCs" },
+  { name: "AP/DP Increase Quests", url: "https://garmoth.com/guides/post/ap-dp-increase-quests", description: "Permanent family-wide stat boosts" },
+  { name: "Weight Limit Guide", url: "https://www.blackdesertfoundry.com/how-to-increase-weight-limit/", description: "All methods to increase carry weight" },
   { name: "BDO Codex", url: "https://bdocodex.com", description: "Item & quest database" },
-  { name: "GrumpyGreenCricket", url: "https://grumpygreen.cricket/bdo-guide/", description: "Guides & walkthroughs" },
   { name: "BDO Planner", url: "https://bdoplanner.com", description: "Gear calculator" },
+  { name: "GrumpyGreenCricket", url: "https://grumpygreen.cricket/bdo-guide/", description: "Guides & walkthroughs" },
+  { name: "Arsha.io Market API", url: "https://arsha.io", description: "Open-source Central Market data" },
 ] as const;
 
 /**
