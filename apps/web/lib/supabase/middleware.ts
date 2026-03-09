@@ -41,9 +41,15 @@ export async function updateSession(request: NextRequest) {
     });
 
     if (!error) {
-      // Session cookies are set by the signIn call via setAll above.
-      // Redirect to the originally requested page to pick up the new session.
-      return supabaseResponse;
+      // Redirect to the same page so the browser makes a new request
+      // with the session cookies set, allowing server components to read them.
+      const redirectUrl = request.nextUrl.clone();
+      const redirect = NextResponse.redirect(redirectUrl);
+      // Copy session cookies from supabaseResponse to the redirect response
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirect.cookies.set(cookie.name, cookie.value);
+      });
+      return redirect;
     }
   }
 
