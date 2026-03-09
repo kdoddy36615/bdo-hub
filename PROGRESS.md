@@ -70,10 +70,10 @@
 
 ---
 
-## Phase 3: Integrations - TODO
+## Phase 3: Integrations - IN PROGRESS
 
-- [ ] Vercel deployment
-- [ ] Git repository setup + initial commit
+- [x] Git repository setup + initial commit (https://github.com/kdoddy36615/bdo-hub)
+- [x] Vercel deployment (https://bdo-hub.vercel.app)
 - [ ] Event integration (BDO news scraping)
 - [ ] Optional community boss timer API config
 - [ ] Garmoth build link integration

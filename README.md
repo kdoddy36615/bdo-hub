@@ -51,7 +51,7 @@ The app will be available at [http://localhost:3000](http://localhost:3000).
 After creating an account and signing in, seed your personal data:
 
 ```bash
-USER_ID=<your-supabase-user-id> npx tsx scripts/ingest_docs.ts
+USER_ID=<your-supabase-user-id> pnpm dlx tsx scripts/ingest_docs.ts
 ```
 
 This parses `docs/bdo_progression_tabs_v9.html` and creates default progression items, playbooks, activities, resources, and storage layout.
