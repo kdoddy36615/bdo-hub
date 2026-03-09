@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -498,6 +498,30 @@ export function CharactersContent({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Card className="border-muted">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Swords className="h-4 w-4 text-muted-foreground" />
+            Class Meta
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Compare class performance on Garmoth&apos;s global grind rankings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <a
+            href="https://garmoth.com/grind-tracker/class-ranking"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="sm">
+              <ExternalLink className="mr-2 h-3.5 w-3.5" />
+              View Class Rankings
+            </Button>
+          </a>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="characters">
         <TabsList>

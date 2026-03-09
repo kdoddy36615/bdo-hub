@@ -16,7 +16,9 @@ import type { Character, ProgressionItem, Activity, ActivityCompletion, Boss } f
 
 const BDO_LINKS = [
   { name: "BDO Official News", url: "https://www.naeu.playblackdesert.com/en-US/News/Notice", description: "Patch notes & announcements" },
-  { name: "Garmoth.com", url: "https://garmoth.com", description: "Gear & grind tools" },
+  { name: "Garmoth Gear Planner", url: "https://garmoth.com/gear-planner", description: "Plan and optimize your gear builds" },
+  { name: "Garmoth Grind Tracker", url: "https://garmoth.com/grind-tracker", description: "Track grind sessions and silver/hr" },
+  { name: "Garmoth Market", url: "https://garmoth.com/market", description: "Market prices and alerts" },
   { name: "BDO Codex", url: "https://bdocodex.com", description: "Item & quest database" },
   { name: "GrumpyGreenCricket", url: "https://grumpygreen.cricket/bdo-guide/", description: "Guides & walkthroughs" },
   { name: "BDO Planner", url: "https://bdoplanner.com", description: "Gear calculator" },
