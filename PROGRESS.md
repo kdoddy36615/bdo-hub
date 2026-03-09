@@ -70,11 +70,11 @@
 
 ---
 
-## Phase 3: Integrations - IN PROGRESS
+## Phase 3: Integrations - COMPLETE
 
 - [x] Git repository setup + initial commit (https://github.com/kdoddy36615/bdo-hub)
 - [x] Vercel deployment (https://bdo-hub.vercel.app)
-- [ ] Event integration (BDO news scraping)
-- [ ] Optional community boss timer API config
-- [ ] Garmoth build link integration
-- [ ] Export dashboard to PDF
+- [x] Auto-login (invisible auth via env vars)
+- [x] BDO community links + server maintenance status on dashboard
+- [x] Garmoth Pro integration (gear planner, grind tracker, market deep-links, class rankings, per-character build URLs)
+- [x] Export dashboard to PDF (window.print with print CSS)
