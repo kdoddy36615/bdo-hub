@@ -1,0 +1,62 @@
+[
+  {
+    "id": "q1",
+    "question": "How do Ninja and Kunoichi compare for a player primarily interested in PvP long-term?",
+    "tags": ["pvp", "ninja", "kunoichi", "class-comparison"],
+    "answers": []
+  },
+  {
+    "id": "q2",
+    "question": "If I want to tag a character purely for relaxed PvE grinding, which classes are currently considered the most brainless/easy to grind with? Are Valkyrie and Guardian still the main recommendations, or are there better options now?",
+    "tags": ["pve", "grinding", "tag", "class-choice"],
+    "answers": []
+  },
+  {
+    "id": "q3",
+    "question": "If my long-term goal is to main Ninja, is an evasion build still considered the standard endgame direction, or has the meta shifted toward DR builds?",
+    "tags": ["ninja", "gear", "evasion", "dr", "endgame"],
+    "answers": []
+  },
+  {
+    "id": "q4",
+    "question": "For Arena of Solare specifically, is it worth worrying about class choice? Do balance patches change the AoS meta frequently enough that class choice matters less?",
+    "tags": ["pvp", "arena-of-solare", "class-choice", "meta"],
+    "answers": []
+  },
+  {
+    "id": "q5",
+    "question": "To a newer player, grabs seem extremely powerful. Are grabs actually that strong in the current PvP meta, or do they mostly feel overpowered until you understand protections and spacing?",
+    "tags": ["pvp", "grabs", "cc", "mechanics"],
+    "answers": []
+  },
+  {
+    "id": "q6",
+    "question": "What is the best way to learn the protection gaps in other classes where you can land a CC?",
+    "tags": ["pvp", "cc", "protections", "learning"],
+    "answers": []
+  },
+  {
+    "id": "q7",
+    "question": "What is the best method to practice CC chains and damage combos? Is the Battle Arena training dummy sufficient, or are there better practice methods?",
+    "tags": ["pvp", "combos", "practice", "battle-arena"],
+    "answers": []
+  },
+  {
+    "id": "q8",
+    "question": "Are any life skills necessary or strongly recommended for progression, or can a player focused on PvE/PvP safely ignore them?",
+    "tags": ["life-skills", "progression", "pve"],
+    "answers": []
+  },
+  {
+    "id": "q9",
+    "question": "Is setting up a worker empire and node network still worth doing for a newer player today?",
+    "tags": ["workers", "nodes", "silver", "progression"],
+    "answers": []
+  },
+  {
+    "id": "q10",
+    "question": "Given the above goals (PvE grinding, PvP improvement, Ninja main), what should my priority order be?",
+    "tags": ["progression", "priorities", "ninja", "pve", "pvp"],
+    "answers": []
+  }
+]

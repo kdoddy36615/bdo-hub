@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Pickaxe, ChevronDown, ChevronRight, Save, Trash2 } from "lucide-react";
+import { Pickaxe, ChevronDown, ChevronRight, Save, Trash2, Fish, Clock } from "lucide-react";
 import { toast } from "sonner";
 import type { GatheringItem } from "@/lib/types";
 
@@ -238,6 +238,40 @@ export function GatheringContent({ items }: { items: GatheringItem[] }) {
             personal notes.
           </CardDescription>
         </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Fish className="h-5 w-5" />
+            Imperial Fishing
+          </CardTitle>
+          <CardDescription>
+            Imperial fishing delivery resets and tips
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Reset Cycle: Every 3 hours</span>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Common Times (EST):</p>
+            <div className="flex flex-wrap gap-1.5">
+              {["2 AM", "5 AM", "8 AM", "11 AM", "2 PM", "5 PM", "8 PM", "11 PM"].map((time) => (
+                <Badge key={time} variant="outline" className="text-xs">{time}</Badge>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5 text-sm text-muted-foreground">
+            <p>
+              <span className="font-medium text-foreground">Tip:</span> If the NPC is sold out, try changing channels or visiting less populated, distant towns like Valencia City, Dreighan, or O&apos;draxxia.
+            </p>
+            <p>
+              <span className="font-medium text-foreground">Note:</span> If you are logged in during a reset, you may need to swap characters or servers to see the new inventory.
+            </p>
+          </div>
+        </CardContent>
       </Card>
 
       {categories.map((category) => (

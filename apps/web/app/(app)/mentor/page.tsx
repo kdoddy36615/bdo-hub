@@ -1,13 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
 import { MentorContent } from "./mentor-content";
+import mentorData from "@/lib/mentor-data.json";
 
-export default async function MentorPage() {
-  const supabase = await createClient();
-
-  const { data: questions } = await supabase
-    .from("questions")
-    .select("*, answers(*)")
-    .order("created_at", { ascending: false });
-
-  return <MentorContent questions={questions ?? []} />;
+export default function MentorPage() {
+  return <MentorContent questions={mentorData} />;
 }
