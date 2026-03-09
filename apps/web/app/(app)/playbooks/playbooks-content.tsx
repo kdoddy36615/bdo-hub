@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,8 @@ import {
 import { Plus, BookOpen, ChevronDown, ChevronUp, Trash2, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import type { Playbook, PlaybookStep } from "@/lib/types";
 
 const CATEGORIES = ["grinding", "boss", "lifeskill", "enhancing", "fishing", "weekly", "other"] as const;
@@ -31,21 +32,17 @@ interface PlaybookWithSteps extends Playbook {
 }
 
 export function PlaybooksContent() {
-  const [playbooks, setPlaybooks] = useState<PlaybookWithSteps[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: playbooks, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const { data } = await supabase.from("playbooks").select("*, playbook_steps(*)").order("created_at", { ascending: false });
+      return (data as PlaybookWithSteps[]) ?? [];
+    },
+    [] as PlaybookWithSteps[]
+  );
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [checkedSteps, setCheckedSteps] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<PlaybookWithSteps | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.from("playbooks").select("*, playbook_steps(*)").order("created_at", { ascending: false }).then(({ data }) => {
-      setPlaybooks((data as PlaybookWithSteps[]) ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   async function handleAdd(formData: FormData) {
     const supabase = createClient();
@@ -78,14 +75,14 @@ export function PlaybooksContent() {
       if (stepsError) {
         toast.error("Playbook created but failed to add steps");
         setOpen(false);
-        router.refresh();
+        refetch();
         return;
       }
     }
 
     toast.success("Playbook created");
     setOpen(false);
-    router.refresh();
+    refetch();
   }
 
   async function handleDelete(playbook: PlaybookWithSteps) {
@@ -111,7 +108,7 @@ export function PlaybooksContent() {
       setExpanded(null);
     }
 
-    router.refresh();
+    refetch();
   }
 
   function resetSteps(playbook: PlaybookWithSteps) {
@@ -136,6 +133,8 @@ export function PlaybooksContent() {
       return next;
     });
   }
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

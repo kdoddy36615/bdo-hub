@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -150,8 +151,13 @@ function ItemForm({
 }
 
 export function ProgressionContent() {
-  const [items, setItems] = useState<ProgressionItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: items, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const { data } = await supabase.from("progression_items").select("*").order("sort_order");
+      return data ?? [];
+    },
+    [] as ProgressionItem[]
+  );
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -159,15 +165,6 @@ export function ProgressionContent() {
   const [deletingItem, setDeletingItem] = useState<ProgressionItem | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.from("progression_items").select("*").order("sort_order").then(({ data }) => {
-      setItems(data ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   async function handleAdd(formData: FormData) {
     const supabase = createClient();
@@ -184,7 +181,7 @@ export function ProgressionContent() {
     }
     setAddOpen(false);
     toast.success("Item added");
-    router.refresh();
+    refetch();
   }
 
   async function handleEdit(formData: FormData) {
@@ -207,7 +204,7 @@ export function ProgressionContent() {
     setEditOpen(false);
     setEditingItem(null);
     toast.success("Item updated");
-    router.refresh();
+    refetch();
   }
 
   async function handleDelete() {
@@ -224,7 +221,7 @@ export function ProgressionContent() {
     setDeleteOpen(false);
     setDeletingItem(null);
     toast.success("Item deleted");
-    router.refresh();
+    refetch();
   }
 
   async function toggleStatus(e: React.MouseEvent, item: ProgressionItem) {
@@ -240,7 +237,7 @@ export function ProgressionContent() {
       return;
     }
     toast.success(`Status changed to ${STATUS_LABELS[next]}`);
-    router.refresh();
+    refetch();
   }
 
   function openEdit(item: ProgressionItem) {
@@ -258,6 +255,8 @@ export function ProgressionContent() {
     if (tab === "all") return items.length;
     return items.filter((i) => i.category === tab).length;
   }
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

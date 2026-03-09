@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,8 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getNextDailyReset, getNextWeeklyReset, formatTimeRemaining, getCurrentDailyPeriod, getCurrentWeeklyPeriod } from "@/lib/timers";
 import { RESET_TIMES } from "@/lib/constants";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import type { Character, ProgressionItem, Activity, ActivityCompletion, Boss } from "@/lib/types";
 
 const BDO_LINKS = [
@@ -66,36 +67,39 @@ function getMaintenanceStatus(now: Date): { active: boolean; message: string } {
 }
 
 export function DashboardContent() {
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [progressionItems, setProgressionItems] = useState<ProgressionItem[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [bosses, setBosses] = useState<Boss[]>([]);
-  const [activityCompletions, setActivityCompletions] = useState<ActivityCompletion[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const [c, p, a, b, ac] = await Promise.all([
+        supabase.from("characters").select("*").order("is_main", { ascending: false }),
+        supabase.from("progression_items").select("*").order("sort_order"),
+        supabase.from("activities").select("*").eq("is_active", true).order("sort_order"),
+        supabase.from("bosses").select("*").order("priority"),
+        supabase.from("activity_completions").select("*"),
+      ]);
+      return {
+        characters: (c.data ?? []) as Character[],
+        progressionItems: (p.data ?? []) as ProgressionItem[],
+        activities: (a.data ?? []) as Activity[],
+        bosses: (b.data ?? []) as Boss[],
+        activityCompletions: (ac.data ?? []) as ActivityCompletion[],
+      };
+    },
+    { characters: [], progressionItems: [], activities: [], bosses: [], activityCompletions: [] } as {
+      characters: Character[];
+      progressionItems: ProgressionItem[];
+      activities: Activity[];
+      bosses: Boss[];
+      activityCompletions: ActivityCompletion[];
+    }
+  );
+
+  const { characters, progressionItems, activities, bosses, activityCompletions } = data;
+
   const [dailyCountdown, setDailyCountdown] = useState("");
   const [weeklyCountdown, setWeeklyCountdown] = useState("");
   const [maintenanceStatus, setMaintenanceStatus] = useState(() => getMaintenanceStatus(new Date()));
   const [loadingBossId, setLoadingBossId] = useState<string | null>(null);
   const [loadingActivityId, setLoadingActivityId] = useState<string | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    Promise.all([
-      supabase.from("characters").select("*").order("is_main", { ascending: false }),
-      supabase.from("progression_items").select("*").order("sort_order"),
-      supabase.from("activities").select("*").eq("is_active", true).order("sort_order"),
-      supabase.from("bosses").select("*").order("priority"),
-      supabase.from("activity_completions").select("*"),
-    ]).then(([c, p, a, b, ac]) => {
-      setCharacters(c.data ?? []);
-      setProgressionItems(p.data ?? []);
-      setActivities(a.data ?? []);
-      setBosses(b.data ?? []);
-      setActivityCompletions(ac.data ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   useEffect(() => {
     function updateTimers() {
@@ -145,7 +149,7 @@ export function DashboardContent() {
       } else {
         toast.success(`Kill logged for ${boss.name}`);
       }
-      router.refresh();
+      refetch();
     } finally {
       setLoadingBossId(null);
     }
@@ -184,11 +188,13 @@ export function DashboardContent() {
           toast.success(`"${activity.name}" completed`);
         }
       }
-      router.refresh();
+      refetch();
     } finally {
       setLoadingActivityId(null);
     }
   }
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

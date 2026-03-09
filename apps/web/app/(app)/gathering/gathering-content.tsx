@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -14,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pickaxe, ChevronDown, ChevronRight, Save, Trash2, Fish, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import type { GatheringItem } from "@/lib/types";
 
 const STORAGE_KEY = "bdo-hub:gathering-notes";
@@ -164,18 +165,15 @@ function GatheringRow({
 }
 
 export function GatheringContent() {
-  const [items, setItems] = useState<GatheringItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: items, loading } = useSupabaseFetch(
+    async (supabase) => {
+      const { data } = await supabase.from("gathering_items").select("*").order("category").order("name");
+      return (data as GatheringItem[]) ?? [];
+    },
+    [] as GatheringItem[]
+  );
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState<NotesMap>({});
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.from("gathering_items").select("*").order("category").order("name").then(({ data }) => {
-      setItems(data ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   // Load notes from localStorage on mount
   useEffect(() => {
@@ -221,6 +219,8 @@ export function GatheringContent() {
   const categories = [...new Set(items.map((i) => i.category))];
 
   const notesCount = Object.keys(notes).length;
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

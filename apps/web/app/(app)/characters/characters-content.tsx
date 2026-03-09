@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,9 +113,20 @@ interface CharacterTagWithNames {
 }
 
 export function CharactersContent() {
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [tags, setTags] = useState<CharacterTagWithNames[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const [c, t] = await Promise.all([
+        supabase.from("characters").select("*").order("is_main", { ascending: false }).order("level", { ascending: false }),
+        supabase.from("character_tags").select("*, main:characters!main_character_id(name, class_name), tagged:characters!tagged_character_id(name, class_name)"),
+      ]);
+      return {
+        characters: c.data ?? [] as Character[],
+        tags: (t.data as CharacterTagWithNames[]) ?? [],
+      };
+    },
+    { characters: [] as Character[], tags: [] as CharacterTagWithNames[] }
+  );
+  const { characters, tags } = data;
   const [charOpen, setCharOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -123,19 +135,6 @@ export function CharactersContent() {
   const [deletingChar, setDeletingChar] = useState<Character | null>(null);
   const [deleteTagOpen, setDeleteTagOpen] = useState(false);
   const [deletingTag, setDeletingTag] = useState<CharacterTagWithNames | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    Promise.all([
-      supabase.from("characters").select("*").order("is_main", { ascending: false }).order("level", { ascending: false }),
-      supabase.from("character_tags").select("*, main:characters!main_character_id(name, class_name), tagged:characters!tagged_character_id(name, class_name)"),
-    ]).then(([c, t]) => {
-      setCharacters(c.data ?? []);
-      setTags((t.data as CharacterTagWithNames[]) ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   async function handleAddChar(formData: FormData) {
     const supabase = createClient();
@@ -157,7 +156,7 @@ export function CharactersContent() {
     }
     toast.success("Character added");
     setCharOpen(false);
-    router.refresh();
+    refetch();
   }
 
   async function handleEditChar(formData: FormData) {
@@ -185,7 +184,7 @@ export function CharactersContent() {
     toast.success("Character updated");
     setEditOpen(false);
     setEditingChar(null);
-    router.refresh();
+    refetch();
   }
 
   async function handleAddTag(formData: FormData) {
@@ -203,7 +202,7 @@ export function CharactersContent() {
     }
     toast.success("Tag created");
     setTagOpen(false);
-    router.refresh();
+    refetch();
   }
 
   async function deleteCharacter() {
@@ -217,7 +216,7 @@ export function CharactersContent() {
     toast.success(`${deletingChar.name} deleted`);
     setDeleteOpen(false);
     setDeletingChar(null);
-    router.refresh();
+    refetch();
   }
 
   async function deleteTag() {
@@ -231,7 +230,7 @@ export function CharactersContent() {
     toast.success("Tag deleted");
     setDeleteTagOpen(false);
     setDeletingTag(null);
-    router.refresh();
+    refetch();
   }
 
   function openEditDialog(char: Character) {
@@ -262,6 +261,8 @@ export function CharactersContent() {
       return next;
     });
   }
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

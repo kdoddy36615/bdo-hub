@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,21 +27,17 @@ import type { Resource } from "@/lib/types";
 const RESOURCE_TYPES = ["guide", "tool", "video", "wiki", "discord", "other"] as const;
 
 export function ResourcesContent() {
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: resources, loading, refetch } = useSupabaseFetch<Resource[]>(
+    async (supabase) => {
+      const { data } = await supabase.from("resources").select("*").order("created_at", { ascending: false });
+      return (data ?? []) as Resource[];
+    },
+    []
+  );
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null);
   const [editTarget, setEditTarget] = useState<Resource | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.from("resources").select("*").order("created_at", { ascending: false }).then(({ data }) => {
-      setResources(data ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   async function handleAdd(formData: FormData) {
     const supabase = createClient();
@@ -62,7 +59,7 @@ export function ResourcesContent() {
 
     toast.success("Resource added");
     setOpen(false);
-    router.refresh();
+    refetch();
   }
 
   async function handleEdit(formData: FormData) {
@@ -90,7 +87,7 @@ export function ResourcesContent() {
 
     toast.success("Resource updated");
     setEditTarget(null);
-    router.refresh();
+    refetch();
   }
 
   async function handleDelete(resource: Resource) {
@@ -105,7 +102,7 @@ export function ResourcesContent() {
 
     toast.success(`"${resource.title}" deleted`);
     setDeleteTarget(null);
-    router.refresh();
+    refetch();
   }
 
   const filtered = resources.filter(
@@ -114,6 +111,8 @@ export function ResourcesContent() {
       r.author?.toLowerCase().includes(search.toLowerCase()) ||
       r.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))
   );
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

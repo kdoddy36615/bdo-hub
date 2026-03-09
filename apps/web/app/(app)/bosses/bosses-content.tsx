@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,30 +93,26 @@ interface BossAltWithChar {
 }
 
 export function BossesContent() {
-  const [bosses, setBosses] = useState<Boss[]>([]);
-  const [bossAlts, setBossAlts] = useState<BossAltWithChar[]>([]);
-  const [characters, setCharacters] = useState<{ id: string; name: string; class_name: string; level: number }[]>([]);
-  const [history, setHistory] = useState<BossHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const [b, ba, c, h] = await Promise.all([
+        supabase.from("bosses").select("*").order("priority"),
+        supabase.from("boss_alts").select("*, characters(name, class_name)"),
+        supabase.from("characters").select("id, name, class_name, level"),
+        supabase.from("boss_history").select("*").order("date", { ascending: false }).limit(50),
+      ]);
+      return {
+        bosses: b.data ?? [] as Boss[],
+        bossAlts: (ba.data as BossAltWithChar[]) ?? [],
+        characters: c.data ?? [] as { id: string; name: string; class_name: string; level: number }[],
+        history: h.data ?? [] as BossHistory[],
+      };
+    },
+    { bosses: [] as Boss[], bossAlts: [] as BossAltWithChar[], characters: [] as { id: string; name: string; class_name: string; level: number }[], history: [] as BossHistory[] }
+  );
+  const { bosses, bossAlts, characters, history } = data;
   const [assignOpen, setAssignOpen] = useState<string | null>(null);
   const [spawnTimers, setSpawnTimers] = useState<Record<string, { countdown: string; time: string } | null>>({});
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    Promise.all([
-      supabase.from("bosses").select("*").order("priority"),
-      supabase.from("boss_alts").select("*, characters(name, class_name)"),
-      supabase.from("characters").select("id, name, class_name, level"),
-      supabase.from("boss_history").select("*").order("date", { ascending: false }).limit(50),
-    ]).then(([b, ba, c, h]) => {
-      setBosses(b.data ?? []);
-      setBossAlts((ba.data as BossAltWithChar[]) ?? []);
-      setCharacters(c.data ?? []);
-      setHistory(h.data ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   useEffect(() => {
     function updateSpawnTimers() {
@@ -156,7 +153,7 @@ export function BossesContent() {
         `Assigned ${character?.name ?? "character"} to ${boss?.name ?? "boss"}`
       );
     }
-    router.refresh();
+    refetch();
   }
 
   async function logAttendance(bossId: string, attended: boolean) {
@@ -175,7 +172,7 @@ export function BossesContent() {
         description: boss?.name ?? "boss",
       });
     }
-    router.refresh();
+    refetch();
   }
 
   async function deleteHistoryEntry(entryId: string) {
@@ -189,7 +186,7 @@ export function BossesContent() {
     } else {
       toast.success("History entry deleted");
     }
-    router.refresh();
+    refetch();
   }
 
   function getAltForBoss(bossId: string) {
@@ -209,6 +206,8 @@ export function BossesContent() {
     medium: bosses.filter((b) => b.priority === "medium"),
     low: bosses.filter((b) => b.priority === "low"),
   };
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">
@@ -284,7 +283,7 @@ export function BossesContent() {
                         <CardContent className="space-y-3">
                           {boss.notable_drops.length > 0 && (
                             <div className="flex flex-wrap gap-1">
-                              {boss.notable_drops.map((drop) => (
+                              {boss.notable_drops.map((drop: string) => (
                                 <Badge key={drop} variant="outline" className="text-xs">{drop}</Badge>
                               ))}
                             </div>

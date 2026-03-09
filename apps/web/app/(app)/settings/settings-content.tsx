@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,30 +9,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useTheme } from "@/components/theme-provider";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import type { UserSettings, Profile } from "@/lib/types";
 
 export function SettingsContent() {
-  const [email, setEmail] = useState("");
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const [userRes, settingsRes, profileRes] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from("user_settings").select("*").single(),
+        supabase.from("profiles").select("*").single(),
+      ]);
+      return {
+        email: userRes.data.user?.email ?? "",
+        settings: settingsRes.data as UserSettings | null,
+        profile: profileRes.data as Profile | null,
+      };
+    },
+    { email: "", settings: null as UserSettings | null, profile: null as Profile | null }
+  );
+  const { email, settings, profile } = data;
   const [saving, setSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    Promise.all([
-      supabase.auth.getUser(),
-      supabase.from("user_settings").select("*").single(),
-      supabase.from("profiles").select("*").single(),
-    ]).then(([userRes, settingsRes, profileRes]) => {
-      setEmail(userRes.data.user?.email ?? "");
-      setSettings(settingsRes.data);
-      setProfile(profileRes.data);
-      setLoading(false);
-    });
-  }, []);
 
   async function handleSave(formData: FormData) {
     setSaving(true);
@@ -78,13 +76,15 @@ export function SettingsContent() {
       }
 
       toast.success("Settings saved");
-      router.refresh();
+      refetch();
     } catch {
       toast.error("An unexpected error occurred");
     } finally {
       setSaving(false);
     }
   }
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

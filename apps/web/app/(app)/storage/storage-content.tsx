@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,19 +15,15 @@ import { toast } from "sonner";
 import type { StorageTab } from "@/lib/types";
 
 export function StorageContent() {
-  const [tabs, setTabs] = useState<StorageTab[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: tabs, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const { data } = await supabase.from("storage_tabs").select("*").order("tab_number");
+      return data ?? [];
+    },
+    [] as StorageTab[]
+  );
   const [addOpen, setAddOpen] = useState(false);
   const [editTab, setEditTab] = useState<StorageTab | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.from("storage_tabs").select("*").order("tab_number").then(({ data }) => {
-      setTabs(data ?? []);
-      setLoading(false);
-    });
-  }, []);
 
   async function seedDefaults() {
     const supabase = createClient();
@@ -40,7 +37,7 @@ export function StorageContent() {
       toast.error("Failed to load defaults: " + error.message);
     } else {
       toast.success("Default storage layout loaded");
-      router.refresh();
+      refetch();
     }
   }
 
@@ -72,7 +69,7 @@ export function StorageContent() {
       toast.success(`Tab ${tabNumber} added`);
     }
     setAddOpen(false);
-    router.refresh();
+    refetch();
   }
 
   async function handleEditSave(formData: FormData) {
@@ -92,7 +89,7 @@ export function StorageContent() {
     }
     toast.success(`Tab ${editTab.tab_number} updated`);
     setEditTab(null);
-    router.refresh();
+    refetch();
   }
 
   async function handleDelete(tab: StorageTab) {
@@ -108,7 +105,7 @@ export function StorageContent() {
       return;
     }
     toast.success(`Tab ${tab.tab_number} deleted`);
-    router.refresh();
+    refetch();
   }
 
   const allTabs = Array.from({ length: 10 }, (_, i) => {
@@ -116,6 +113,8 @@ export function StorageContent() {
     const existing = tabs.find((t) => t.tab_number === num);
     return existing || { tab_number: num, label: `Tab ${num}`, description: null, id: null as string | null, user_id: "", color: null };
   });
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">

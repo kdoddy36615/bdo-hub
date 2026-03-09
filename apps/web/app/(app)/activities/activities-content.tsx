@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,29 +29,26 @@ const TAB_CONFIG: { value: CategoryTab; label: string; badgeLabel: string }[] = 
 ];
 
 export function ActivitiesContent() {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [completions, setCompletions] = useState<ActivityCompletion[]>([]);
-  const [completionHistory, setCompletionHistory] = useState<ActivityCompletionWithActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createClient();
-    Promise.all([
-      supabase.from("activities").select("*").eq("is_active", true).order("sort_order"),
-      supabase.from("activity_completions").select("*").order("completed_at", { ascending: false }).limit(100),
-      supabase.from("activity_completions").select("*, activities(name, reset_type)").order("completed_at", { ascending: false }).limit(50),
-    ]).then(([a, c, h]) => {
-      setActivities(a.data ?? []);
-      setCompletions(c.data ?? []);
-      setCompletionHistory((h.data as ActivityCompletionWithActivity[]) ?? []);
-      setLoading(false);
-    });
-  }, []);
+  const { data, loading, refetch } = useSupabaseFetch(
+    async (supabase) => {
+      const [a, c, h] = await Promise.all([
+        supabase.from("activities").select("*").eq("is_active", true).order("sort_order"),
+        supabase.from("activity_completions").select("*").order("completed_at", { ascending: false }).limit(100),
+        supabase.from("activity_completions").select("*, activities(name, reset_type)").order("completed_at", { ascending: false }).limit(50),
+      ]);
+      return {
+        activities: a.data ?? [] as Activity[],
+        completions: c.data ?? [] as ActivityCompletion[],
+        completionHistory: (h.data as ActivityCompletionWithActivity[]) ?? [],
+      };
+    },
+    { activities: [] as Activity[], completions: [] as ActivityCompletion[], completionHistory: [] as ActivityCompletionWithActivity[] }
+  );
+  const { activities, completions, completionHistory } = data;
   const [dailyCountdown, setDailyCountdown] = useState("");
   const [weeklyCountdown, setWeeklyCountdown] = useState("");
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     function update() {
@@ -106,7 +104,7 @@ export function ActivitiesContent() {
       }
       toast.success(`"${activity.name}" completed`);
     }
-    router.refresh();
+    refetch();
   }
 
   async function handleAdd(formData: FormData) {
@@ -124,7 +122,7 @@ export function ActivitiesContent() {
     }
     toast.success(`"${name}" added`);
     setOpen(false);
-    router.refresh();
+    refetch();
   }
 
   async function handleDelete() {
@@ -140,7 +138,7 @@ export function ActivitiesContent() {
     }
     toast.success(`"${deleteTarget.name}" deleted`);
     setDeleteTarget(null);
-    router.refresh();
+    refetch();
   }
 
   const categorized = Object.fromEntries(
@@ -149,6 +147,8 @@ export function ActivitiesContent() {
       activities.filter((a) => a.category === tab.value),
     ])
   ) as Record<CategoryTab, Activity[]>;
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="space-y-6">
