@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Separator } from "@/components/ui/separator";
+import { ThemeSelector } from "@/components/theme-selector";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <span className="text-sm text-muted-foreground">BDO Command Center</span>
+          <div className="ml-auto">
+            <ThemeSelector />
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-6">
           <div className="mx-auto max-w-6xl">{children}</div>

@@ -32,11 +32,18 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                var theme = localStorage.getItem('theme');
-                if (theme === 'light') {
-                  document.documentElement.classList.remove('dark');
-                } else {
+                var old = localStorage.getItem('theme');
+                if (old && !localStorage.getItem('bdo-theme')) {
+                  localStorage.setItem('bdo-theme', old === 'light' ? 'dawn' : 'midnight');
+                  localStorage.removeItem('theme');
+                }
+                var theme = localStorage.getItem('bdo-theme') || 'midnight';
+                document.documentElement.setAttribute('data-theme', theme);
+                var dark = ['midnight','crimson','ocean','forest','violet','oled'];
+                if (dark.indexOf(theme) !== -1) {
                   document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
                 }
               })();
             `,

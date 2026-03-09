@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTheme } from "@/components/theme-provider";
+import { THEMES } from "@/lib/themes";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useSupabaseFetch } from "@/lib/hooks/use-supabase-fetch";
 import { PageSkeleton } from "@/components/page-skeleton";
+import { cn } from "@/lib/utils";
 import type { UserSettings, Profile } from "@/lib/types";
 
 export function SettingsContent() {
@@ -31,7 +33,7 @@ export function SettingsContent() {
   );
   const { email, settings, profile } = data;
   const [saving, setSaving] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeConfig, setTheme } = useTheme();
 
   async function handleSave(formData: FormData) {
     setSaving(true);
@@ -166,18 +168,58 @@ export function SettingsContent() {
         <Card>
           <CardHeader>
             <CardTitle>Appearance</CardTitle>
+            <CardDescription>
+              Current theme: {themeConfig.name} ({themeConfig.mode})
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Theme</p>
-                <p className="text-sm text-muted-foreground">
-                  Currently using {theme} mode
-                </p>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Dark Themes</Label>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {THEMES.filter((t) => t.mode === "dark").map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTheme(t.id)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs transition-colors hover:bg-accent",
+                      theme === t.id && "border-primary ring-2 ring-primary"
+                    )}
+                  >
+                    <div className="flex h-6 w-full overflow-hidden rounded">
+                      <div className="flex-1" style={{ backgroundColor: t.preview.bg }} />
+                      <div className="flex-1" style={{ backgroundColor: t.preview.card }} />
+                      <div className="flex-1" style={{ backgroundColor: t.preview.primary }} />
+                      <div className="flex-1" style={{ backgroundColor: t.preview.accent }} />
+                    </div>
+                    <span className="truncate">{t.name}</span>
+                  </button>
+                ))}
               </div>
-              <Button type="button" variant="outline" onClick={toggleTheme}>
-                Switch to {theme === "dark" ? "Light" : "Dark"}
-              </Button>
+            </div>
+            <div>
+              <Label className="mb-2 block">Light Themes</Label>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {THEMES.filter((t) => t.mode === "light").map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTheme(t.id)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs transition-colors hover:bg-accent",
+                      theme === t.id && "border-primary ring-2 ring-primary"
+                    )}
+                  >
+                    <div className="flex h-6 w-full overflow-hidden rounded">
+                      <div className="flex-1" style={{ backgroundColor: t.preview.bg }} />
+                      <div className="flex-1" style={{ backgroundColor: t.preview.card }} />
+                      <div className="flex-1" style={{ backgroundColor: t.preview.primary }} />
+                      <div className="flex-1" style={{ backgroundColor: t.preview.accent }} />
+                    </div>
+                    <span className="truncate">{t.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
