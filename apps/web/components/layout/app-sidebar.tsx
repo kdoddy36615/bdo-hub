@@ -15,7 +15,6 @@ import {
   MessageCircleQuestion,
   Settings,
   Swords,
-  LogOut,
   Sun,
   Moon,
 } from "lucide-react";
@@ -32,8 +31,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useTheme } from "@/components/theme-provider";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -52,13 +49,6 @@ const NAV_ITEMS = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const router = useRouter();
-
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
 
   return (
     <Sidebar>
@@ -100,12 +90,6 @@ export function AppSidebar() {
                 <Moon className="h-4 w-4" />
               )}
               <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
