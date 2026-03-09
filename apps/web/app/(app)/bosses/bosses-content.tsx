@@ -91,20 +91,31 @@ interface BossAltWithChar {
   characters: { name: string; class_name: string } | null;
 }
 
-export function BossesContent({
-  bosses,
-  bossAlts,
-  characters,
-  history,
-}: {
-  bosses: Boss[];
-  bossAlts: BossAltWithChar[];
-  characters: { id: string; name: string; class_name: string; level: number }[];
-  history: BossHistory[];
-}) {
+export function BossesContent() {
+  const [bosses, setBosses] = useState<Boss[]>([]);
+  const [bossAlts, setBossAlts] = useState<BossAltWithChar[]>([]);
+  const [characters, setCharacters] = useState<{ id: string; name: string; class_name: string; level: number }[]>([]);
+  const [history, setHistory] = useState<BossHistory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [assignOpen, setAssignOpen] = useState<string | null>(null);
   const [spawnTimers, setSpawnTimers] = useState<Record<string, { countdown: string; time: string } | null>>({});
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    Promise.all([
+      supabase.from("bosses").select("*").order("priority"),
+      supabase.from("boss_alts").select("*, characters(name, class_name)"),
+      supabase.from("characters").select("id, name, class_name, level"),
+      supabase.from("boss_history").select("*").order("date", { ascending: false }).limit(50),
+    ]).then(([b, ba, c, h]) => {
+      setBosses(b.data ?? []);
+      setBossAlts((ba.data as BossAltWithChar[]) ?? []);
+      setCharacters(c.data ?? []);
+      setHistory(h.data ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
     function updateSpawnTimers() {

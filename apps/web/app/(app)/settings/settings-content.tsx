@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,18 +12,28 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { UserSettings, Profile } from "@/lib/types";
 
-export function SettingsContent({
-  email,
-  settings,
-  profile,
-}: {
-  email: string;
-  settings: UserSettings | null;
-  profile: Profile | null;
-}) {
+export function SettingsContent() {
+  const [email, setEmail] = useState("");
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    Promise.all([
+      supabase.auth.getUser(),
+      supabase.from("user_settings").select("*").single(),
+      supabase.from("profiles").select("*").single(),
+    ]).then(([userRes, settingsRes, profileRes]) => {
+      setEmail(userRes.data.user?.email ?? "");
+      setSettings(settingsRes.data);
+      setProfile(profileRes.data);
+      setLoading(false);
+    });
+  }, []);
 
   async function handleSave(formData: FormData) {
     setSaving(true);

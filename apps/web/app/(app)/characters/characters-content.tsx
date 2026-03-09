@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -111,13 +111,10 @@ interface CharacterTagWithNames {
   tagged: { name: string; class_name: string } | null;
 }
 
-export function CharactersContent({
-  characters,
-  tags,
-}: {
-  characters: Character[];
-  tags: CharacterTagWithNames[];
-}) {
+export function CharactersContent() {
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [tags, setTags] = useState<CharacterTagWithNames[]>([]);
+  const [loading, setLoading] = useState(true);
   const [charOpen, setCharOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -127,6 +124,18 @@ export function CharactersContent({
   const [deleteTagOpen, setDeleteTagOpen] = useState(false);
   const [deletingTag, setDeletingTag] = useState<CharacterTagWithNames | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    Promise.all([
+      supabase.from("characters").select("*").order("is_main", { ascending: false }).order("level", { ascending: false }),
+      supabase.from("character_tags").select("*, main:characters!main_character_id(name, class_name), tagged:characters!tagged_character_id(name, class_name)"),
+    ]).then(([c, t]) => {
+      setCharacters(c.data ?? []);
+      setTags((t.data as CharacterTagWithNames[]) ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   async function handleAddChar(formData: FormData) {
     const supabase = createClient();

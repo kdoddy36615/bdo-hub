@@ -27,15 +27,25 @@ const TAB_CONFIG: { value: CategoryTab; label: string; badgeLabel: string }[] = 
   { value: "other", label: "Other", badgeLabel: "Other" },
 ];
 
-export function ActivitiesContent({
-  activities,
-  completions,
-  completionHistory,
-}: {
-  activities: Activity[];
-  completions: ActivityCompletion[];
-  completionHistory: ActivityCompletionWithActivity[];
-}) {
+export function ActivitiesContent() {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [completions, setCompletions] = useState<ActivityCompletion[]>([]);
+  const [completionHistory, setCompletionHistory] = useState<ActivityCompletionWithActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    Promise.all([
+      supabase.from("activities").select("*").eq("is_active", true).order("sort_order"),
+      supabase.from("activity_completions").select("*").order("completed_at", { ascending: false }).limit(100),
+      supabase.from("activity_completions").select("*, activities(name, reset_type)").order("completed_at", { ascending: false }).limit(50),
+    ]).then(([a, c, h]) => {
+      setActivities(a.data ?? []);
+      setCompletions(c.data ?? []);
+      setCompletionHistory((h.data as ActivityCompletionWithActivity[]) ?? []);
+      setLoading(false);
+    });
+  }, []);
   const [dailyCountdown, setDailyCountdown] = useState("");
   const [weeklyCountdown, setWeeklyCountdown] = useState("");
   const [open, setOpen] = useState(false);

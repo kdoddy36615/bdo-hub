@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,12 +25,22 @@ import type { Resource } from "@/lib/types";
 
 const RESOURCE_TYPES = ["guide", "tool", "video", "wiki", "discord", "other"] as const;
 
-export function ResourcesContent({ resources }: { resources: Resource[] }) {
+export function ResourcesContent() {
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Resource | null>(null);
   const [editTarget, setEditTarget] = useState<Resource | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("resources").select("*").order("created_at", { ascending: false }).then(({ data }) => {
+      setResources(data ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   async function handleAdd(formData: FormData) {
     const supabase = createClient();

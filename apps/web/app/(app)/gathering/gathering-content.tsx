@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pickaxe, ChevronDown, ChevronRight, Save, Trash2, Fish, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import type { GatheringItem } from "@/lib/types";
 
 const STORAGE_KEY = "bdo-hub:gathering-notes";
@@ -162,9 +163,19 @@ function GatheringRow({
   );
 }
 
-export function GatheringContent({ items }: { items: GatheringItem[] }) {
+export function GatheringContent() {
+  const [items, setItems] = useState<GatheringItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState<NotesMap>({});
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("gathering_items").select("*").order("category").order("name").then(({ data }) => {
+      setItems(data ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   // Load notes from localStorage on mount
   useEffect(() => {

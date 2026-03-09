@@ -65,27 +65,37 @@ function getMaintenanceStatus(now: Date): { active: boolean; message: string } {
   return { active: false, message: `Next maintenance in ${daysUntilWed} days (Wed 11pm EST)` };
 }
 
-interface DashboardContentProps {
-  characters: Character[];
-  progressionItems: ProgressionItem[];
-  activities: Activity[];
-  bosses: Boss[];
-  activityCompletions: ActivityCompletion[];
-}
-
-export function DashboardContent({
-  characters,
-  progressionItems,
-  activities,
-  bosses,
-  activityCompletions,
-}: DashboardContentProps) {
+export function DashboardContent() {
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [progressionItems, setProgressionItems] = useState<ProgressionItem[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [bosses, setBosses] = useState<Boss[]>([]);
+  const [activityCompletions, setActivityCompletions] = useState<ActivityCompletion[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dailyCountdown, setDailyCountdown] = useState("");
   const [weeklyCountdown, setWeeklyCountdown] = useState("");
   const [maintenanceStatus, setMaintenanceStatus] = useState(() => getMaintenanceStatus(new Date()));
   const [loadingBossId, setLoadingBossId] = useState<string | null>(null);
   const [loadingActivityId, setLoadingActivityId] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    Promise.all([
+      supabase.from("characters").select("*").order("is_main", { ascending: false }),
+      supabase.from("progression_items").select("*").order("sort_order"),
+      supabase.from("activities").select("*").eq("is_active", true).order("sort_order"),
+      supabase.from("bosses").select("*").order("priority"),
+      supabase.from("activity_completions").select("*"),
+    ]).then(([c, p, a, b, ac]) => {
+      setCharacters(c.data ?? []);
+      setProgressionItems(p.data ?? []);
+      setActivities(a.data ?? []);
+      setBosses(b.data ?? []);
+      setActivityCompletions(ac.data ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
     function updateTimers() {

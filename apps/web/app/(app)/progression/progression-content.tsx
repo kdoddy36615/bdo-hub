@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -149,7 +149,9 @@ function ItemForm({
   );
 }
 
-export function ProgressionContent({ items }: { items: ProgressionItem[] }) {
+export function ProgressionContent() {
+  const [items, setItems] = useState<ProgressionItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -158,6 +160,14 @@ export function ProgressionContent({ items }: { items: ProgressionItem[] }) {
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("progression_items").select("*").order("sort_order").then(({ data }) => {
+      setItems(data ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   async function handleAdd(formData: FormData) {
     const supabase = createClient();

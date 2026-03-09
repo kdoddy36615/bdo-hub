@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,20 @@ import { DEFAULT_STORAGE_LAYOUT } from "@/lib/constants";
 import { toast } from "sonner";
 import type { StorageTab } from "@/lib/types";
 
-export function StorageContent({ tabs }: { tabs: StorageTab[] }) {
+export function StorageContent() {
+  const [tabs, setTabs] = useState<StorageTab[]>([]);
+  const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [editTab, setEditTab] = useState<StorageTab | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("storage_tabs").select("*").order("tab_number").then(({ data }) => {
+      setTabs(data ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   async function seedDefaults() {
     const supabase = createClient();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,12 +30,22 @@ interface PlaybookWithSteps extends Playbook {
   playbook_steps: PlaybookStep[];
 }
 
-export function PlaybooksContent({ playbooks }: { playbooks: PlaybookWithSteps[] }) {
+export function PlaybooksContent() {
+  const [playbooks, setPlaybooks] = useState<PlaybookWithSteps[]>([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [checkedSteps, setCheckedSteps] = useState<Set<string>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<PlaybookWithSteps | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("playbooks").select("*, playbook_steps(*)").order("created_at", { ascending: false }).then(({ data }) => {
+      setPlaybooks((data as PlaybookWithSteps[]) ?? []);
+      setLoading(false);
+    });
+  }, []);
 
   async function handleAdd(formData: FormData) {
     const supabase = createClient();
