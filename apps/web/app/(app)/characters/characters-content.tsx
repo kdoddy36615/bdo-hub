@@ -27,7 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Users, Link2, Pencil, Trash2, Swords, Shield, X, ChevronDown } from "lucide-react";
+import { Plus, Users, Link2, Pencil, Trash2, Swords, Shield, X, ChevronDown, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BDO_CLASSES } from "@/lib/constants";
 import { toast } from "sonner";
@@ -54,6 +54,29 @@ const GEAR_SLOTS = {
     { key: "belt", label: "Belt", category: "mixed" },
   ],
 } as const;
+
+// --- Garmoth URL helpers ---
+// We store a Garmoth build link inside the `notes` column using a
+// `[garmoth:<url>]` prefix so it can be parsed back out for display.
+const GARMOTH_PREFIX_RE = /^\[garmoth:(.*?)\]\n?/;
+
+function parseGarmothUrl(notes: string | null): { garmothUrl: string | null; cleanNotes: string | null } {
+  if (!notes) return { garmothUrl: null, cleanNotes: null };
+  const match = notes.match(GARMOTH_PREFIX_RE);
+  if (!match) return { garmothUrl: null, cleanNotes: notes };
+  const garmothUrl = match[1] || null;
+  const cleanNotes = notes.replace(GARMOTH_PREFIX_RE, "").trim() || null;
+  return { garmothUrl, cleanNotes };
+}
+
+function encodeGarmothNotes(garmothUrl: string | null, notes: string | null): string | null {
+  const trimmedUrl = garmothUrl?.trim() || null;
+  const trimmedNotes = notes?.trim() || null;
+  if (!trimmedUrl && !trimmedNotes) return null;
+  if (!trimmedUrl) return trimmedNotes;
+  const prefix = `[garmoth:${trimmedUrl}]`;
+  return trimmedNotes ? `${prefix}\n${trimmedNotes}` : prefix;
+}
 
 function getGearScoreColor(gs: number): string {
   if (gs >= 700) return "text-purple-400";
@@ -107,6 +130,8 @@ export function CharactersContent({
 
   async function handleAddChar(formData: FormData) {
     const supabase = createClient();
+    const garmothUrl = (formData.get("garmoth_url") as string) || null;
+    const rawNotes = (formData.get("notes") as string) || null;
     const { error } = await supabase.from("characters").insert({
       name: formData.get("name") as string,
       class_name: formData.get("class_name") as string,
@@ -115,7 +140,7 @@ export function CharactersContent({
       aap: parseInt(formData.get("aap") as string) || 0,
       dp: parseInt(formData.get("dp") as string) || 0,
       is_main: formData.get("is_main") === "on",
-      notes: (formData.get("notes") as string) || null,
+      notes: encodeGarmothNotes(garmothUrl, rawNotes),
     });
     if (error) {
       toast.error("Failed to add character");
@@ -129,6 +154,8 @@ export function CharactersContent({
   async function handleEditChar(formData: FormData) {
     if (!editingChar) return;
     const supabase = createClient();
+    const garmothUrl = (formData.get("garmoth_url") as string) || null;
+    const rawNotes = (formData.get("notes") as string) || null;
     const { error } = await supabase
       .from("characters")
       .update({
@@ -139,7 +166,7 @@ export function CharactersContent({
         aap: parseInt(formData.get("aap") as string) || 0,
         dp: parseInt(formData.get("dp") as string) || 0,
         is_main: formData.get("is_main") === "on",
-        notes: (formData.get("notes") as string) || null,
+        notes: encodeGarmothNotes(garmothUrl, rawNotes),
       })
       .eq("id", editingChar.id);
     if (error) {
@@ -330,6 +357,18 @@ export function CharactersContent({
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="garmoth_url">Garmoth Build URL</Label>
+                  <Input
+                    id="garmoth_url"
+                    name="garmoth_url"
+                    type="url"
+                    placeholder="https://garmoth.com/character/..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Paste your Garmoth.com build link to quick-access it from the character card.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="notes">Notes</Label>
                   <Input id="notes" name="notes" />
                 </div>
@@ -389,8 +428,21 @@ export function CharactersContent({
                 </div>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit_garmoth_url">Garmoth Build URL</Label>
+                <Input
+                  id="edit_garmoth_url"
+                  name="garmoth_url"
+                  type="url"
+                  placeholder="https://garmoth.com/character/..."
+                  defaultValue={parseGarmothUrl(editingChar.notes).garmothUrl ?? ""}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Paste your Garmoth.com build link to quick-access it from the character card.
+                </p>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="edit_notes">Notes</Label>
-                <Input id="edit_notes" name="notes" defaultValue={editingChar.notes ?? ""} />
+                <Input id="edit_notes" name="notes" defaultValue={parseGarmothUrl(editingChar.notes).cleanNotes ?? ""} />
               </div>
               <DialogFooter>
                 <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
@@ -458,6 +510,7 @@ export function CharactersContent({
           {characters.map((char) => {
             const isExpanded = expandedCards.has(char.id);
             const gs = char.gear_score;
+            const { garmothUrl, cleanNotes } = parseGarmothUrl(char.notes);
             return (
             <Card key={char.id}>
               <CardContent className="p-4">
@@ -470,12 +523,30 @@ export function CharactersContent({
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{char.name}</p>
                         {char.is_main && <Badge>Main</Badge>}
+                        {garmothUrl && (
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <a
+                                  href={garmothUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 rounded-md bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-medium text-orange-400 ring-1 ring-orange-500/20 hover:bg-orange-500/20 transition-colors"
+                                />
+                              }
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Garmoth
+                            </TooltipTrigger>
+                            <TooltipContent>View build on Garmoth.com</TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {char.class_name} - Lv. {char.level}
                       </p>
-                      {char.notes && (
-                        <p className="mt-0.5 text-xs text-muted-foreground/70 italic">{char.notes}</p>
+                      {cleanNotes && (
+                        <p className="mt-0.5 text-xs text-muted-foreground/70 italic">{cleanNotes}</p>
                       )}
                     </div>
                   </div>

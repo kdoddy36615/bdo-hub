@@ -7,11 +7,61 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, Clock, Skull, Users, Swords, Zap, CheckCircle, CalendarCheck } from "lucide-react";
+import { TrendingUp, Clock, Skull, Users, Swords, Zap, CheckCircle, CalendarCheck, Printer, ExternalLink, Globe, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getNextDailyReset, getNextWeeklyReset, formatTimeRemaining, getCurrentDailyPeriod, getCurrentWeeklyPeriod } from "@/lib/timers";
+import { RESET_TIMES } from "@/lib/constants";
 import type { Character, ProgressionItem, Activity, ActivityCompletion, Boss } from "@/lib/types";
+
+const BDO_LINKS = [
+  { name: "BDO Official News", url: "https://www.naeu.playblackdesert.com/en-US/News/Notice", description: "Patch notes & announcements" },
+  { name: "Garmoth.com", url: "https://garmoth.com", description: "Gear & grind tools" },
+  { name: "BDO Codex", url: "https://bdocodex.com", description: "Item & quest database" },
+  { name: "GrumpyGreenCricket", url: "https://grumpygreen.cricket/bdo-guide/", description: "Guides & walkthroughs" },
+  { name: "BDO Planner", url: "https://bdoplanner.com", description: "Gear calculator" },
+] as const;
+
+/**
+ * Check if BDO maintenance is likely in progress.
+ * Maintenance typically runs Wednesday ~11pm EST for about 4 hours.
+ * Returns status info with whether maintenance is active and a message.
+ */
+function getMaintenanceStatus(now: Date): { active: boolean; message: string } {
+  // Get current time in ET
+  const etString = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const etDate = new Date(etString);
+  const dayOfWeek = etDate.getDay(); // 0=Sun, 3=Wed
+  const hour = etDate.getHours();
+
+  // Wednesday (day 3) starting at 11pm (hour 23) => maintenance window
+  // Thursday (day 4) until ~3am (hour 3) => maintenance window
+  const isWednesdayLate = dayOfWeek === RESET_TIMES.maintenance.day && hour >= RESET_TIMES.maintenance.hour;
+  const isThursdayEarly = dayOfWeek === 4 && hour < 3;
+
+  if (isWednesdayLate || isThursdayEarly) {
+    return { active: true, message: "Maintenance likely in progress" };
+  }
+
+  // Calculate time until next Wednesday 11pm ET
+  let daysUntilWed = (RESET_TIMES.maintenance.day - dayOfWeek + 7) % 7;
+  if (daysUntilWed === 0 && hour < RESET_TIMES.maintenance.hour) {
+    daysUntilWed = 0; // It's Wednesday but before maintenance
+  } else if (daysUntilWed === 0) {
+    daysUntilWed = 7; // It's Wednesday after maintenance passed
+  }
+
+  if (daysUntilWed === 0) {
+    const hoursUntil = RESET_TIMES.maintenance.hour - hour;
+    return { active: false, message: `Maintenance in ~${hoursUntil}h (tonight)` };
+  }
+
+  if (daysUntilWed === 1) {
+    return { active: false, message: "Maintenance tomorrow (Wed 11pm EST)" };
+  }
+
+  return { active: false, message: `Next maintenance in ${daysUntilWed} days (Wed 11pm EST)` };
+}
 
 interface DashboardContentProps {
   characters: Character[];
@@ -30,6 +80,7 @@ export function DashboardContent({
 }: DashboardContentProps) {
   const [dailyCountdown, setDailyCountdown] = useState("");
   const [weeklyCountdown, setWeeklyCountdown] = useState("");
+  const [maintenanceStatus, setMaintenanceStatus] = useState(() => getMaintenanceStatus(new Date()));
   const [loadingBossId, setLoadingBossId] = useState<string | null>(null);
   const [loadingActivityId, setLoadingActivityId] = useState<string | null>(null);
   const router = useRouter();
@@ -39,6 +90,7 @@ export function DashboardContent({
       const now = new Date();
       setDailyCountdown(formatTimeRemaining(getNextDailyReset(now), now));
       setWeeklyCountdown(formatTimeRemaining(getNextWeeklyReset(now), now));
+      setMaintenanceStatus(getMaintenanceStatus(now));
     }
 
     updateTimers();
@@ -128,11 +180,22 @@ export function DashboardContent({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back{mainChar ? `, ${mainChar.name}` : ""}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back{mainChar ? `, ${mainChar.name}` : ""}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.print()}
+          className="print:hidden"
+        >
+          <Printer className="mr-2 h-4 w-4" />
+          Export PDF
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -333,6 +396,80 @@ export function DashboardContent({
                 No characters added yet. Go to Characters to add your first.
               </p>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* BDO Links & Server Status */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              BDO Links
+            </CardTitle>
+            <CardDescription>Quick links to community resources</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {BDO_LINKS.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
+                >
+                  <div>
+                    <span className="font-medium">{link.name}</span>
+                    <p className="text-xs text-muted-foreground">{link.description}</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </a>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5" />
+              Server Status
+            </CardTitle>
+            <CardDescription>Weekly maintenance schedule</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className={`flex items-center gap-3 rounded-lg border p-4 ${
+                maintenanceStatus.active
+                  ? "border-yellow-500/50 bg-yellow-500/10"
+                  : "border-green-500/50 bg-green-500/10"
+              }`}>
+                <div className={`h-3 w-3 rounded-full ${
+                  maintenanceStatus.active
+                    ? "bg-yellow-500 animate-pulse"
+                    : "bg-green-500"
+                }`} />
+                <div>
+                  <p className="font-medium">
+                    {maintenanceStatus.active ? "Maintenance Window" : "Servers Online"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {maintenanceStatus.message}
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-sm font-medium">Typical Schedule</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Wednesday 11:00 PM - Thursday ~3:00 AM EST
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Actual times may vary. Check official announcements for exact schedule.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

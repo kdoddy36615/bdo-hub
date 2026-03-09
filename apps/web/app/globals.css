@@ -127,3 +127,72 @@
     @apply font-sans;
   }
 }
+
+/* Print styles for Export PDF */
+@media print {
+  /* Add a print title */
+  body::before {
+    content: "BDO Command Center — Dashboard Report";
+    display: block;
+    font-size: 20pt;
+    font-weight: bold;
+    margin-bottom: 16pt;
+    text-align: center;
+  }
+
+  /* Hide sidebar and navigation */
+  [data-slot="sidebar"],
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-trigger"],
+  [data-slot="sidebar-rail"],
+  [data-sidebar] {
+    display: none !important;
+  }
+
+  /* Hide header bar */
+  header {
+    display: none !important;
+  }
+
+  /* Hide all buttons and interactive elements */
+  button,
+  [role="checkbox"] {
+    display: none !important;
+  }
+
+  /* Clean layout — remove padding/margin constraints from main content */
+  [data-slot="sidebar-inset"],
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* White background and black text */
+  body,
+  html {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Clean card styles for print */
+  [data-slot="card"] {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+    break-inside: avoid;
+  }
+
+  [data-slot="card"] * {
+    color: black !important;
+  }
+
+  /* Ensure grid layouts work on paper */
+  .grid {
+    display: grid !important;
+  }
+}
