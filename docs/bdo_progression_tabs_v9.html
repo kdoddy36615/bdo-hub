@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BDO Progression Guide (v9)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{background:#0b0f14;color:#e6edf3;font-family:Arial,Helvetica,sans-serif;margin:0;padding:30px}
+.container{max-width:1200px;margin:auto}
+h1,h2,h3{color:#7cc4ff}
+.tabs{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.tab-btn{padding:10px 16px;background:#111821;border:none;color:#e6edf3;border-radius:8px;cursor:pointer}
+.tab-btn.active{background:#1c2a3a}
+.tab{display:none;background:#111821;padding:24px;border-radius:12px}
+.tab.active{display:block}
+.card{background:#0f141b;padding:18px;border-radius:10px;margin-bottom:16px}
+ul{margin-top:6px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.06)}
+th{color:#7cc4ff}
+.muted{color:#9aa6b2}
+</style>
+
+<script>
+function openTab(name){
+ const tabs=document.querySelectorAll('.tab');
+ const btns=document.querySelectorAll('.tab-btn');
+ tabs.forEach(t=>t.classList.remove('active'));
+ btns.forEach(b=>b.classList.remove('active'));
+ document.getElementById(name).classList.add('active');
+ document.getElementById(name+'Btn').classList.add('active');
+}
+</script>
+</head>
+
+<body>
+<div class="container">
+
+<h1>BDO Personal Progression Guide</h1>
+<p class="muted">Combat progression + AFK fishing + long-term systems.</p>
+
+<div class="tabs">
+<button class="tab-btn active" id="combatBtn" onclick="openTab('combat')">Combat</button>
+<button class="tab-btn" id="fishingBtn" onclick="openTab('fishing')">AFK Fishing</button>
+<button class="tab-btn" id="dailyBtn" onclick="openTab('daily')">Time-Gated</button>
+<button class="tab-btn" id="journalsBtn" onclick="openTab('journals')">Adventure Journals</button>
+<button class="tab-btn" id="scheduleBtn" onclick="openTab('schedule')">Server Resets</button>
+<button class="tab-btn" id="storageBtn" onclick="openTab('storage')">Storage Organization</button>
+<button class="tab-btn" id="gatheringBtn" onclick="openTab('gathering')">Gathering Exclusives</button>
+<button class="tab-btn" id="guidesBtn" onclick="openTab('guides')">Passive Systems</button>
+</div>
+
+
+<div class="tab active" id="combat">
+<div class="card">
+<h2>Main Priority</h2>
+<ol>
+<li>Adventure Journals</li>
+<li>Deboreka → Kharazad progression</li>
+<li>Crystal optimization</li>
+<li>Artifact/lightstones</li>
+</ol>
+</div>
+</div>
+
+
+<div class="tab" id="fishing">
+<div class="card">
+<h2>AFK Fishing</h2>
+<ul>
+<li>Velia ocean tile</li>
+<li>Dreamy Starlight / Balenos rod</li>
+<li>Overnight AFK income</li>
+</ul>
+</div>
+</div>
+
+
+<div class="tab" id="daily">
+<div class="card">
+<h2>Important Dailies / Weeklies</h2>
+<ul>
+<li>World Bosses</li>
+<li>Black Shrine weekly</li>
+<li>Pit of the Undying</li>
+<li>Atoraxxion weekly</li>
+</ul>
+</div>
+</div>
+
+
+<div class="tab" id="journals">
+<div class="card">
+<h2>Adventure Journals</h2>
+<ul>
+<li>Igor Bartali Log</li>
+<li>Barrier of Infestation</li>
+<li>A Gift for Papu</li>
+<li>Mother's Warning</li>
+<li>LoML Ruler of Taebaek</li>
+<li>LoML Dokebi's Gift</li>
+<li>10th Anniversary Journal</li>
+</ul>
+</div>
+</div>
+
+
+<div class="tab" id="schedule">
+<div class="card">
+<h2>Reset Times (EST)</h2>
+<table>
+<tr><th>Type</th><th>Time</th></tr>
+<tr><td>Daily Reset</td><td>7pm EST / 8pm EDT</td></tr>
+<tr><td>Weekly Reset</td><td>Wednesday evening</td></tr>
+<tr><td>Black Shrine</td><td>Weekly reset</td></tr>
+<tr><td>Maintenance</td><td>Usually Wednesday night</td></tr>
+</table>
+</div>
+</div>
+
+
+<div class="tab" id="storage">
+<div class="card">
+<h2>Recommended Storage Layout</h2>
+<table>
+<tr><th>Tab</th><th>Purpose</th></tr>
+<tr><td>1</td><td>Enhancement materials</td></tr>
+<tr><td>2</td><td>Combat buffs</td></tr>
+<tr><td>3</td><td>Food / elixirs</td></tr>
+<tr><td>4</td><td>Gear storage</td></tr>
+<tr><td>5</td><td>Worker / contribution items</td></tr>
+<tr><td>6</td><td>World boss drops</td></tr>
+<tr><td>7</td><td>Accessory materials</td></tr>
+<tr><td>8</td><td>Lifeskill materials</td></tr>
+<tr><td>9</td><td>Marketplace items</td></tr>
+<tr><td>10</td><td>Temporary unknown items</td></tr>
+</table>
+</div>
+</div>
+
+
+<div class="tab" id="gathering">
+
+<div class="card">
+<h2>Items Only Obtainable From Gathering</h2>
+<p>These items either only come from gathering or are primarily generated through gathering activities.</p>
+
+<table>
+<tr>
+<th>Item</th>
+<th>Use</th>
+<th>Why It Matters</th>
+</tr>
+
+<tr>
+<td>Hard Black Crystal Shard</td>
+<td>Enhancement materials</td>
+<td>Used to craft Concentrated Magical Black Stones for enhancing boss gear.</td>
+</tr>
+
+<tr>
+<td>Sharp Black Crystal Shard</td>
+<td>Enhancement materials</td>
+<td>Same purpose as Hard shards but for weapon upgrades.</td>
+</tr>
+
+<tr>
+<td>Caphras Stones (small amounts)</td>
+<td>Gear progression</td>
+<td>Occasionally obtained from gathering; needed for late-game gear upgrades.</td>
+</tr>
+
+<tr>
+<td>Spirit Dust</td>
+<td>Caphras crafting</td>
+<td>Used to craft Caphras Stones through processing.</td>
+</tr>
+
+<tr>
+<td>Fairy Powder</td>
+<td>Fairy growth</td>
+<td>Used to upgrade fairy tiers and reroll fairy skills.</td>
+</tr>
+
+<tr>
+<td>Traces (Trace of Earth, Savagery, etc.)</td>
+<td>Alchemy</td>
+<td>Required for many alchemy recipes and lifeskill progression.</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="card">
+<h2>Should You Gather?</h2>
+
+<ul>
+<li>Not required for combat progression</li>
+<li>Most items can be purchased on the market</li>
+<li>Gathering becomes valuable mainly for lifeskill-focused players</li>
+</ul>
+
+<p class="muted">
+Since your main focus is combat grinding and AFK fishing, gathering can remain optional unless you later pursue lifeskill progression.
+</p>
+
+</div>
+
+</div>
+
+
+<div class="tab" id="guides">
+
+<div class="card">
+<h2>Future Systems</h2>
+<ul>
+<li>Worker / Node empire</li>
+<li>Marketplace trading</li>
+<li>Contribution node investment</li>
+</ul>
+</div>
+
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-03-09T08:52:05.865Z",
+  "parsed": {
+    "journals": 7,
+    "progressionItems": 4,
+    "storageLayout": 10,
+    "gatheringItems": 6
+  },
+  "inserted": {
+    "progressionItems": 11,
+    "activities": 4,
+    "playbooks": 4,
+    "resources": 4,
+    "storageTabs": 10
+  },
+  "skipped": [],
+  "errors": []
+}

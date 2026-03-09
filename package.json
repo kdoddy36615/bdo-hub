@@ -1,0 +1,10 @@
+{
+  "name": "bdo-hub",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @bdo-hub/web dev",
+    "build": "pnpm --filter @bdo-hub/web build",
+    "lint": "pnpm --filter @bdo-hub/web lint",
+    "db:seed": "tsx scripts/ingest_docs.ts"
+  }
+}
