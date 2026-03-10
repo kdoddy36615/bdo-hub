@@ -430,7 +430,7 @@ function AnswerForm({
     <Card className="border-primary/30 bg-muted/10">
       <CardContent className="p-4 space-y-3">
         <p className="text-sm font-medium">{isEdit ? "Edit answer" : "Add your answer"}</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Input
             placeholder="Your name"
             value={author}

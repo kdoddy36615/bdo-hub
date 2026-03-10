@@ -28,6 +28,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const NAV_ITEMS = [
@@ -48,11 +49,16 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/dashboard" className="flex items-center gap-2 px-2 py-3">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 px-2 py-3"
+          onClick={() => isMobile && setOpenMobile(false)}
+        >
           <Swords className="h-6 w-6 text-primary" />
           <span className="text-lg font-bold">BDO Command Center</span>
         </Link>
@@ -66,7 +72,12 @@ export function AppSidebar() {
               {NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    render={<Link href={item.href} />}
+                    render={
+                      <Link
+                        href={item.href}
+                        onClick={() => isMobile && setOpenMobile(false)}
+                      />
+                    }
                     isActive={pathname === item.href}
                   >
                     <item.icon className="h-4 w-4" />
