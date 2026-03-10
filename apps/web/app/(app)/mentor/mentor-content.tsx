@@ -16,6 +16,9 @@ import {
   Plus,
   Loader2,
   Send,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -61,11 +64,53 @@ const CONFIDENCE_COLORS: Record<string, string> = {
 
 const CONFIDENCE_OPTIONS = ["low", "medium", "high", "verified"] as const;
 
+// Tag color mapping by category
+const TAG_COLORS: Record<string, string> = {
+  // PvP / Combat - red
+  pvp: "bg-red-500/15 text-red-400 border-red-500/30",
+  "arena-of-solare": "bg-red-500/15 text-red-400 border-red-500/30",
+  grabs: "bg-red-500/15 text-red-400 border-red-500/30",
+  cc: "bg-red-500/15 text-red-400 border-red-500/30",
+  mechanics: "bg-red-500/15 text-red-400 border-red-500/30",
+  protections: "bg-red-500/15 text-red-400 border-red-500/30",
+  combos: "bg-red-500/15 text-red-400 border-red-500/30",
+  practice: "bg-red-500/15 text-red-400 border-red-500/30",
+  "battle-arena": "bg-red-500/15 text-red-400 border-red-500/30",
+  // PvE - green
+  pve: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  grinding: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  // Classes - purple
+  ninja: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  kunoichi: "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  "class-comparison": "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  "class-choice": "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  // Gear - blue
+  gear: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  evasion: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  dr: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  endgame: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  // Progression / Economy - amber
+  progression: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  priorities: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  workers: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  nodes: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  silver: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  tag: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  // Life skills - teal
+  "life-skills": "bg-teal-500/15 text-teal-400 border-teal-500/30",
+  // Meta / Learning - slate
+  meta: "bg-slate-500/15 text-slate-400 border-slate-500/30",
+  learning: "bg-slate-500/15 text-slate-400 border-slate-500/30",
+};
+
+const DEFAULT_TAG_COLOR = "bg-zinc-500/15 text-zinc-400 border-zinc-500/30";
+
 export function MentorContent({ questions: staticQuestions }: { questions: StaticQuestion[] }) {
   const [dbAnswers, setDbAnswers] = useState<DbMentorAnswer[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [answeringId, setAnsweringId] = useState<string | null>(null);
+  const [editingAnswer, setEditingAnswer] = useState<MentorAnswer | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -79,7 +124,6 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
       });
   }, []);
 
-  // Merge static JSON questions with Supabase answers
   const questions: MentorQuestion[] = useMemo(() => {
     return staticQuestions.map((q) => ({
       ...q,
@@ -134,6 +178,50 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
     setAnsweringId(null);
   }
 
+  async function handleEditAnswer(answerId: string, author: string, text: string, source: string, confidence: string) {
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("mentor_answers")
+      .update({
+        author: author || "Anonymous",
+        answer_text: text,
+        source,
+        confidence,
+      })
+      .eq("id", answerId);
+
+    setSaving(false);
+    if (error) {
+      toast.error("Failed to update answer");
+      return;
+    }
+    setDbAnswers((prev) =>
+      prev.map((a) =>
+        a.id === answerId
+          ? { ...a, author: author || "Anonymous", answer_text: text, source, confidence }
+          : a
+      )
+    );
+    toast.success("Answer updated!");
+    setEditingAnswer(null);
+  }
+
+  async function handleDeleteAnswer(answerId: string) {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("mentor_answers")
+      .delete()
+      .eq("id", answerId);
+
+    if (error) {
+      toast.error("Failed to delete answer");
+      return;
+    }
+    setDbAnswers((prev) => prev.filter((a) => a.id !== answerId));
+    toast.success("Answer deleted");
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -179,19 +267,18 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap gap-1.5 mt-2">
                   {q.tags.map((tag) => (
-                    <Badge
+                    <span
                       key={tag}
-                      variant="outline"
-                      className="text-xs cursor-pointer"
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border cursor-pointer transition-opacity hover:opacity-80 ${TAG_COLORS[tag] ?? DEFAULT_TAG_COLOR}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSearchQuery(tag);
                       }}
                     >
                       {tag}
-                    </Badge>
+                    </span>
                   ))}
                 </div>
               </CardHeader>
@@ -199,32 +286,61 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
               {expanded === q.id && (
                 <CardContent className="space-y-3 pt-0">
                   {q.answers.length > 0 ? (
-                    q.answers.map((a) => (
-                      <Card key={a.id} className="bg-muted/30">
-                        <CardContent className="p-4 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <User className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-sm font-medium">{a.author}</span>
+                    q.answers.map((a) =>
+                      editingAnswer?.id === a.id ? (
+                        <AnswerForm
+                          key={a.id}
+                          questionId={q.id}
+                          isPending={saving}
+                          initial={editingAnswer}
+                          onSubmit={(author, text, source, confidence) => {
+                            handleEditAnswer(a.id, author, text, source, confidence);
+                          }}
+                          onCancel={() => setEditingAnswer(null)}
+                        />
+                      ) : (
+                        <Card key={a.id} className="bg-muted/30">
+                          <CardContent className="p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-sm font-medium">{a.author}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {a.confidence && (
+                                  <Badge className={`text-xs ${CONFIDENCE_COLORS[a.confidence] ?? ""}`}>
+                                    <ShieldCheck className="mr-1 h-3 w-3" />
+                                    {a.confidence}
+                                  </Badge>
+                                )}
+                                {a.source && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {a.source}
+                                  </Badge>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                  onClick={() => setEditingAnswer(a)}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleDeleteAnswer(a.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              {a.confidence && (
-                                <Badge className={`text-xs ${CONFIDENCE_COLORS[a.confidence] ?? ""}`}>
-                                  <ShieldCheck className="mr-1 h-3 w-3" />
-                                  {a.confidence}
-                                </Badge>
-                              )}
-                              {a.source && (
-                                <Badge variant="outline" className="text-xs">
-                                  {a.source}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-sm whitespace-pre-line">{a.text}</p>
-                        </CardContent>
-                      </Card>
-                    ))
+                            <p className="text-sm whitespace-pre-line">{a.text}</p>
+                          </CardContent>
+                        </Card>
+                      )
+                    )
                   ) : (
                     <div className="flex items-center justify-center py-4 text-center">
                       <p className="text-sm text-muted-foreground">
@@ -294,23 +410,26 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
 function AnswerForm({
   questionId,
   isPending,
+  initial,
   onSubmit,
   onCancel,
 }: {
   questionId: string;
   isPending: boolean;
+  initial?: MentorAnswer;
   onSubmit: (author: string, text: string, source: string, confidence: string) => void;
   onCancel: () => void;
 }) {
-  const [author, setAuthor] = useState("");
-  const [text, setText] = useState("");
-  const [source, setSource] = useState("");
-  const [confidence, setConfidence] = useState("medium");
+  const [author, setAuthor] = useState(initial?.author ?? "");
+  const [text, setText] = useState(initial?.text ?? "");
+  const [source, setSource] = useState(initial?.source ?? "");
+  const [confidence, setConfidence] = useState(initial?.confidence ?? "medium");
+  const isEdit = !!initial;
 
   return (
     <Card className="border-primary/30 bg-muted/10">
       <CardContent className="p-4 space-y-3">
-        <p className="text-sm font-medium">Add your answer</p>
+        <p className="text-sm font-medium">{isEdit ? "Edit answer" : "Add your answer"}</p>
         <div className="grid grid-cols-2 gap-3">
           <Input
             placeholder="Your name"
@@ -361,10 +480,12 @@ function AnswerForm({
             >
               {isPending ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : isEdit ? (
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
               ) : (
                 <Send className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Save
+              {isEdit ? "Update" : "Save"}
             </Button>
           </div>
         </div>
