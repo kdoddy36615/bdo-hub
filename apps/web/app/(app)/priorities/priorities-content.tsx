@@ -21,6 +21,8 @@ import {
   Gem,
   Trophy,
   Target,
+  Timer,
+  Lock,
 } from "lucide-react";
 
 type Priority = "high" | "medium" | "low";
@@ -32,6 +34,7 @@ interface Activity {
   silverPerHour?: string;
   time: string;
   priority: Priority;
+  timeGate?: string;
   tips?: string;
   yourStatus?: string;
 }
@@ -78,6 +81,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         rewards: ["Silver", "Same drops as open world", "Peaceful grinding"],
         silverPerHour: "Slightly less than contested open world",
         time: "1 hour sessions (ticket-based)",
+        timeGate: "Limited tickets per day",
         priority: "medium",
         tips: "Great when you don't want to deal with PvP or crowded rotations. Use when main spots are contested.",
       },
@@ -197,6 +201,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
           "Karanda, Kzarka, Kutum, Nouver, Garmoth, Quint, Muraka, Vell, Offin. Spawn on a set schedule.",
         rewards: ["Boss gear boxes (Dandelion, Kzarka, Kutum, etc.)", "Concentrated Stones", "Hunter Seals", "Silver"],
         time: "5–15 min per boss",
+        timeGate: "Fixed schedule (multiple per day)",
         priority: "medium",
         tips: "Park alts at boss locations. Check your Boss Tracker page for schedule. Vell is weekly (Sunday) — make sure to do this one.",
         yourStatus: "You have boss alts — make sure they're parked at the right locations.",
@@ -207,6 +212,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
           "Solo/group instanced boss fights. Use Black Shrine tokens to enter.",
         rewards: ["Caphras Stones", "Memory Fragments", "Boss aura", "High silver value"],
         time: "10–20 min per fight",
+        timeGate: "Token-gated (tokens from grinding/events)",
         priority: "high",
         tips: "Great silver per time invested. Do these whenever you have tokens. The difficulty scales — start with what you can handle.",
       },
@@ -216,6 +222,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
           "Weekly boss scrolls from Black Spirit. Solo or 5-person party for 5x loot.",
         rewards: ["Memory Fragments", "Concentrated Stones", "Hunter Seals"],
         time: "30–60 min for a full scroll group",
+        timeGate: "Weekly scrolls from Black Spirit",
         priority: "medium",
         tips: "Always do in a 5-person party — you get loot from everyone's scrolls. Find groups in server chat or Discord.",
       },
@@ -234,6 +241,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         description: "Black Spirit gives weekly boss scroll quests. Share in a 5-man party.",
         rewards: ["Memory Fragments", "Concentrated Stones", "Hunter Seals"],
         time: "~1 hour with party",
+        timeGate: "Resets weekly (Thursday)",
         priority: "high",
         tips: "NEVER skip weekly scrolls. The Memory Fragments alone are worth it.",
       },
@@ -242,6 +250,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         description: "Sea boss Vell spawns every Sunday. Park a character with a boat.",
         rewards: ["Vell's Heart (BIS crystal, ~4B)", "Vell's Concentrated Magic (guaranteed)"],
         time: "15–30 min",
+        timeGate: "Once per week (Sunday)",
         priority: "high",
         tips: "Even if you don't get the Heart drop, Vell's Concentrated Magic sells for good silver. Don't miss this.",
       },
@@ -250,6 +259,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         description: "Turn in crafted food/elixirs to Imperial NPCs for guaranteed silver.",
         rewards: ["200M–400M+ silver daily", "Contribution EXP"],
         time: "15–30 min (with prep)",
+        timeGate: "Resets daily (channel swap resets NPC stock)",
         priority: "high",
         tips: "Cook in bulk, box and deliver daily. One of the best passive silver sources. Even just buying meals and boxing works.",
       },
@@ -258,6 +268,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         description: "Various daily quests from the Black Spirit for Hunter Seals and items.",
         rewards: ["Hunter Seals", "Contribution EXP", "Silver"],
         time: "15–30 min",
+        timeGate: "Resets daily",
         priority: "medium",
         tips: "Quick and easy. Do alongside other activities.",
       },
@@ -266,6 +277,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         description: "Guild missions for guild funds, guild EXP, and personal rewards.",
         rewards: ["Guild Silver", "Guild EXP", "Personal silver", "Guild Skill points"],
         time: "Varies",
+        timeGate: "Daily + weekly missions",
         priority: "medium",
         tips: "Help your guild grow. Large guild quests give more rewards but need coordination.",
       },
@@ -275,8 +287,45 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
           "Daily challenge to kill X mobs at a grind spot. Bonus rewards on completion.",
         rewards: ["Extra silver", "Caphras Stones", "Enhancement materials"],
         time: "Complete during regular grinding",
+        timeGate: "Resets daily",
         priority: "medium",
         tips: "Pick these up before grinding — free extra rewards for what you're already doing.",
+      },
+      {
+        name: "Agris Fever (Daily Accumulation)",
+        description: "Agris points accumulate daily (up to cap). Boosts trash loot by 100% at grind spots.",
+        rewards: ["2x trash loot value", "Massive silver boost at high-end spots"],
+        time: "Use during regular grinding",
+        timeGate: "Accumulates daily, stacks up to 3 scrolls",
+        priority: "high",
+        tips: "Don't let it cap — use at your best grind spot for max value. Wasting Agris at low spots = wasting silver.",
+      },
+      {
+        name: "Dark Rift Bosses",
+        description: "Solo boss spawns that appear on your map over time. Finite pool that respawns periodically.",
+        rewards: ["Caphras Stones", "Memory Fragments", "Black Stones", "Boss auras"],
+        time: "5–10 min per boss",
+        timeGate: "Spawns over time, ~10 bosses in rotation",
+        priority: "medium",
+        tips: "Check your map (M) for skull icons. Quick kills, decent loot. Clear them so new ones can spawn.",
+      },
+      {
+        name: "Attendance Rewards / Challenge Log (Y)",
+        description: "Daily login rewards + challenge tab rewards. Free stuff just for logging in and playing.",
+        rewards: ["Silver", "Valks", "Cron Stones", "Event items", "Book of Combat"],
+        time: "1 min (just log in)",
+        timeGate: "Resets daily, monthly attendance cycle",
+        priority: "high",
+        tips: "Always claim these. Press Y → check all tabs. Some rewards expire if you don't collect them.",
+      },
+      {
+        name: "Family Fame Fund (Daily)",
+        description: "Passive silver based on your total Life Skill, Combat, and Knowledge fame scores.",
+        rewards: ["Up to ~100M silver/day passively"],
+        time: "0 min — auto-collected",
+        timeGate: "Deposited daily into mail",
+        priority: "high",
+        tips: "This scales with all your life skills and combat fame. Level up life skills to increase it. Collect from mail (B).",
       },
     ],
   },
@@ -312,6 +361,7 @@ const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         rewards: ["Materials", "Hard/Sharp shards", "Silver", "Rare drops"],
         silverPerHour: "100M–200M+",
         time: "30 min energy dumps",
+        timeGate: "Energy-gated (regenerates over time)",
         priority: "low",
         tips: "Use Magical tools. Good for when you have full energy and limited time.",
       },
@@ -387,6 +437,25 @@ export function PrioritiesContent() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Zap className="h-3 w-3 text-yellow-400" />
                   <span>Adventure Log progress (chip away)</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground pt-2 font-medium">Time-Gated (don&apos;t let these cap/expire)</p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Timer className="h-3 w-3 text-orange-400" />
+                  <span>Agris Fever — use before it caps</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Timer className="h-3 w-3 text-orange-400" />
+                  <span>Attendance / Y menu rewards — claim daily</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Timer className="h-3 w-3 text-orange-400" />
+                  <span>Family Fame Fund — collect from mail</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Timer className="h-3 w-3 text-orange-400" />
+                  <span>Dark Rift bosses — clear so new ones spawn</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground italic pt-1">
@@ -480,6 +549,15 @@ export function PrioritiesContent() {
                           {activity.time}
                         </span>
                       </div>
+
+                      {activity.timeGate && (
+                        <div className="flex items-center gap-2">
+                          <Timer className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                          <span className="text-xs text-orange-400">
+                            {activity.timeGate}
+                          </span>
+                        </div>
+                      )}
 
                       {activity.tips && (
                         <div className="flex items-start gap-2 pt-1 border-t border-border/50">
