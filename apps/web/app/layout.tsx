@@ -16,8 +16,30 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BDO Command Center",
-  description: "Personal progression and knowledge management for Black Desert Online",
+  title: {
+    default: "BDO Command Center",
+    template: "%s | BDO Command Center",
+  },
+  description:
+    "Personal progression tracker, gear planner, boss timers, grind spots, and knowledge hub for Black Desert Online.",
+  keywords: [
+    "BDO",
+    "Black Desert Online",
+    "gear tracker",
+    "boss timer",
+    "grind spots",
+    "progression",
+  ],
+  authors: [{ name: "Kevin" }],
+  icons: {
+    icon: "/favicon.ico",
+  },
+  openGraph: {
+    title: "BDO Command Center",
+    description:
+      "Personal progression tracker, gear planner, boss timers, grind spots, and knowledge hub for Black Desert Online.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

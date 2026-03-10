@@ -20,6 +20,7 @@ import {
   Newspaper,
   FlaskConical,
   Target,
+  ListChecks,
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,6 +51,7 @@ const NAV_ITEMS = [
   { title: "Buffs & Guides", href: "/buffs", icon: FlaskConical },
   { title: "Priorities", href: "/priorities", icon: Target },
   { title: "Mentor Q&A", href: "/mentor", icon: MessageCircleQuestion },
+  { title: "Status & Roadmap", href: "/status", icon: ListChecks },
   { title: "Settings", href: "/settings", icon: Settings },
 ] as const;
 
