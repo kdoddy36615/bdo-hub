@@ -18,6 +18,8 @@ import {
   Swords,
   Crosshair,
   Newspaper,
+  FlaskConical,
+  Target,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,6 +47,8 @@ const NAV_ITEMS = [
   { title: "Grind Spots", href: "/grind", icon: Crosshair },
   { title: "Gathering", href: "/gathering", icon: Pickaxe },
   { title: "News & Events", href: "/news", icon: Newspaper },
+  { title: "Buffs & Guides", href: "/buffs", icon: FlaskConical },
+  { title: "Priorities", href: "/priorities", icon: Target },
   { title: "Mentor Q&A", href: "/mentor", icon: MessageCircleQuestion },
   { title: "Settings", href: "/settings", icon: Settings },
 ] as const;
