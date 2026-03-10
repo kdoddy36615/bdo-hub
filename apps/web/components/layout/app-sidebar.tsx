@@ -15,6 +15,8 @@ import {
   MessageCircleQuestion,
   Settings,
   Swords,
+  Crosshair,
+  Newspaper,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,7 +39,9 @@ const NAV_ITEMS = [
   { title: "Playbooks", href: "/playbooks", icon: BookOpen },
   { title: "Resources", href: "/resources", icon: Library },
   { title: "Storage", href: "/storage", icon: Archive },
+  { title: "Grind Spots", href: "/grind", icon: Crosshair },
   { title: "Gathering", href: "/gathering", icon: Pickaxe },
+  { title: "News & Events", href: "/news", icon: Newspaper },
   { title: "Mentor Q&A", href: "/mentor", icon: MessageCircleQuestion },
   { title: "Settings", href: "/settings", icon: Settings },
 ] as const;

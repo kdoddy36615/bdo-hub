@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, Clock, Skull, Users, Swords, Zap, CheckCircle, CalendarCheck, Printer, ExternalLink, Globe, Wrench } from "lucide-react";
+import { TrendingUp, Clock, Skull, Users, Swords, Zap, CheckCircle, CalendarCheck, Printer, ExternalLink, Globe, Wrench, CalendarDays, Gift, Copy, Check, Newspaper } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getNextDailyReset, getNextWeeklyReset, formatTimeRemaining, getCurrentDailyPeriod, getCurrentWeeklyPeriod } from "@/lib/timers";
@@ -104,6 +104,9 @@ export function DashboardContent() {
   const [maintenanceStatus, setMaintenanceStatus] = useState(() => getMaintenanceStatus(new Date()));
   const [loadingBossId, setLoadingBossId] = useState<string | null>(null);
   const [loadingActivityId, setLoadingActivityId] = useState<string | null>(null);
+  const [events, setEvents] = useState<{ id: number; title: string; img: string; link: string; end_at: string | null }[]>([]);
+  const [coupons, setCoupons] = useState<{ id: number; code: string; expire_at: string }[]>([]);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   useEffect(() => {
     function updateTimers() {
@@ -116,6 +119,29 @@ export function DashboardContent() {
     updateTimers();
     const interval = setInterval(updateTimers, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch live events & coupons
+  useEffect(() => {
+    fetch("/api/garmoth/events")
+      .then((r) => r.json())
+      .then((data) => {
+        const active = (data as typeof events).filter(
+          (e) => e.id && (e as unknown as { active: number }).active === 1
+        );
+        setEvents(active.slice(0, 4));
+      })
+      .catch(() => {});
+    fetch("/api/garmoth/coupons")
+      .then((r) => r.json())
+      .then((data) => {
+        const now = new Date();
+        const valid = (data as typeof coupons).filter(
+          (c) => c.expire_at && new Date(c.expire_at) > now
+        );
+        setCoupons(valid);
+      })
+      .catch(() => {});
   }, []);
 
   const mainChar = characters.find((c) => c.is_main);
@@ -422,34 +448,80 @@ export function DashboardContent() {
         </Card>
       </div>
 
-      {/* BDO Links & Server Status */}
+      {/* Live Events, Coupons & Server Status */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              BDO Links
+              <CalendarDays className="h-5 w-5" />
+              Active Events
             </CardTitle>
-            <CardDescription>Quick links to community resources</CardDescription>
+            <CardDescription>{events.length} events running now</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {BDO_LINKS.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
-                >
-                  <div>
-                    <span className="font-medium">{link.name}</span>
-                    <p className="text-xs text-muted-foreground">{link.description}</p>
-                  </div>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
+            {events.length > 0 ? (
+              <div className="space-y-2">
+                {events.map((event) => (
+                  <a
+                    key={event.id}
+                    href={event.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-medium line-clamp-1">{event.title}</span>
+                      {event.end_at && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {(() => {
+                            const diff = new Date(event.end_at).getTime() - Date.now();
+                            if (diff <= 0) return "Ended";
+                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                            return days > 0 ? `${days}d left` : "Ending soon";
+                          })()}
+                        </p>
+                      )}
+                    </div>
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No active events</p>
+            )}
+            {coupons.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm font-medium flex items-center gap-1.5 mb-2">
+                  <Gift className="h-4 w-4 text-primary" />
+                  Active Coupons
+                </p>
+                <div className="space-y-2">
+                  {coupons.map((coupon) => (
+                    <div key={coupon.id} className="flex items-center justify-between rounded-lg border p-2.5">
+                      <code className="text-xs font-bold tracking-wider">{coupon.code}</code>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => {
+                          navigator.clipboard.writeText(coupon.code);
+                          setCopiedId(coupon.id);
+                          toast.success(`Copied: ${coupon.code}`);
+                          setTimeout(() => setCopiedId(null), 2000);
+                        }}
+                      >
+                        {copiedId === coupon.id ? (
+                          <Check className="h-3.5 w-3.5 text-green-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
