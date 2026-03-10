@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,12 @@ import {
   HelpCircle,
   User,
   ShieldCheck,
+  Plus,
+  Loader2,
+  Send,
 } from "lucide-react";
+import { toast } from "sonner";
+import { addAnswer } from "./actions";
 
 interface MentorAnswer {
   id: string;
@@ -37,9 +42,14 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   low: "bg-zinc-500",
 };
 
-export function MentorContent({ questions }: { questions: MentorQuestion[] }) {
+const CONFIDENCE_OPTIONS = ["low", "medium", "high", "verified"] as const;
+
+export function MentorContent({ questions: initialQuestions }: { questions: MentorQuestion[] }) {
+  const [questions, setQuestions] = useState(initialQuestions);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [answeringId, setAnsweringId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const filteredQuestions = useMemo(() => {
     if (!searchQuery.trim()) return questions;
@@ -144,12 +154,47 @@ export function MentorContent({ questions }: { questions: MentorQuestion[] }) {
                       </Card>
                     ))
                   ) : (
-                    <div className="flex items-center justify-center py-6 text-center">
+                    <div className="flex items-center justify-center py-4 text-center">
                       <p className="text-sm text-muted-foreground">
-                        No answers yet. Add answers by editing{" "}
-                        <code className="text-xs bg-muted px-1 py-0.5 rounded">lib/mentor-data.json</code>
+                        No answers yet &mdash; be the first to answer!
                       </p>
                     </div>
+                  )}
+
+                  {answeringId === q.id ? (
+                    <AnswerForm
+                      questionId={q.id}
+                      isPending={isPending}
+                      onSubmit={(author, text, source, confidence) => {
+                        startTransition(async () => {
+                          const result = await addAnswer(q.id, text, author, source, confidence);
+                          if (result.error) {
+                            toast.error(result.error);
+                          } else if (result.answer) {
+                            setQuestions((prev) =>
+                              prev.map((question) =>
+                                question.id === q.id
+                                  ? { ...question, answers: [...question.answers, result.answer!] }
+                                  : question
+                              )
+                            );
+                            toast.success("Answer saved!");
+                            setAnsweringId(null);
+                          }
+                        });
+                      }}
+                      onCancel={() => setAnsweringId(null)}
+                    />
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setAnsweringId(q.id)}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      Add Answer
+                    </Button>
                   )}
                 </CardContent>
               )}
@@ -186,5 +231,87 @@ export function MentorContent({ questions }: { questions: MentorQuestion[] }) {
         )}
       </div>
     </div>
+  );
+}
+
+function AnswerForm({
+  questionId,
+  isPending,
+  onSubmit,
+  onCancel,
+}: {
+  questionId: string;
+  isPending: boolean;
+  onSubmit: (author: string, text: string, source: string, confidence: string) => void;
+  onCancel: () => void;
+}) {
+  const [author, setAuthor] = useState("");
+  const [text, setText] = useState("");
+  const [source, setSource] = useState("");
+  const [confidence, setConfidence] = useState("medium");
+
+  return (
+    <Card className="border-primary/30 bg-muted/10">
+      <CardContent className="p-4 space-y-3">
+        <p className="text-sm font-medium">Add your answer</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            placeholder="Your name"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            className="h-8"
+          />
+          <Input
+            placeholder="Source (e.g. Discord, guide URL)"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="h-8"
+          />
+        </div>
+        <textarea
+          placeholder="Write your answer..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={4}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
+        />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Confidence:</span>
+            {CONFIDENCE_OPTIONS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setConfidence(level)}
+                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                  confidence === level
+                    ? `text-white ${CONFIDENCE_COLORS[level]}`
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={onCancel} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => onSubmit(author, text, source, confidence)}
+              disabled={isPending || !text.trim()}
+            >
+              {isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Save
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
