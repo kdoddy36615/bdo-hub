@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,17 @@ import {
   Send,
 } from "lucide-react";
 import { toast } from "sonner";
-import { addAnswer } from "./actions";
+import { createClient } from "@/lib/supabase/client";
+
+interface DbMentorAnswer {
+  id: string;
+  question_key: string;
+  author: string;
+  answer_text: string;
+  source: string;
+  confidence: string;
+  created_at: string;
+}
 
 interface MentorAnswer {
   id: string;
@@ -26,6 +36,13 @@ interface MentorAnswer {
   text: string;
   source: string;
   confidence: string;
+}
+
+interface StaticQuestion {
+  id: string;
+  question: string;
+  tags: string[];
+  answers: MentorAnswer[];
 }
 
 interface MentorQuestion {
@@ -44,12 +61,42 @@ const CONFIDENCE_COLORS: Record<string, string> = {
 
 const CONFIDENCE_OPTIONS = ["low", "medium", "high", "verified"] as const;
 
-export function MentorContent({ questions: initialQuestions }: { questions: MentorQuestion[] }) {
-  const [questions, setQuestions] = useState(initialQuestions);
+export function MentorContent({ questions: staticQuestions }: { questions: StaticQuestion[] }) {
+  const [dbAnswers, setDbAnswers] = useState<DbMentorAnswer[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [answeringId, setAnsweringId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("mentor_answers")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (data) setDbAnswers(data as DbMentorAnswer[]);
+      });
+  }, []);
+
+  // Merge static JSON questions with Supabase answers
+  const questions: MentorQuestion[] = useMemo(() => {
+    return staticQuestions.map((q) => ({
+      ...q,
+      answers: [
+        ...q.answers,
+        ...dbAnswers
+          .filter((a) => a.question_key === q.id)
+          .map((a) => ({
+            id: a.id,
+            author: a.author,
+            text: a.answer_text,
+            source: a.source,
+            confidence: a.confidence,
+          })),
+      ],
+    }));
+  }, [staticQuestions, dbAnswers]);
 
   const filteredQuestions = useMemo(() => {
     if (!searchQuery.trim()) return questions;
@@ -61,6 +108,31 @@ export function MentorContent({ questions: initialQuestions }: { questions: Ment
         q.answers.some((a) => a.text.toLowerCase().includes(query))
     );
   }, [questions, searchQuery]);
+
+  async function handleAddAnswer(questionId: string, author: string, text: string, source: string, confidence: string) {
+    setSaving(true);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("mentor_answers")
+      .insert({
+        question_key: questionId,
+        author: author || "Anonymous",
+        answer_text: text,
+        source,
+        confidence,
+      })
+      .select()
+      .single();
+
+    setSaving(false);
+    if (error) {
+      toast.error("Failed to save answer");
+      return;
+    }
+    setDbAnswers((prev) => [...prev, data as DbMentorAnswer]);
+    toast.success("Answer saved!");
+    setAnsweringId(null);
+  }
 
   return (
     <div className="space-y-6">
@@ -164,24 +236,9 @@ export function MentorContent({ questions: initialQuestions }: { questions: Ment
                   {answeringId === q.id ? (
                     <AnswerForm
                       questionId={q.id}
-                      isPending={isPending}
+                      isPending={saving}
                       onSubmit={(author, text, source, confidence) => {
-                        startTransition(async () => {
-                          const result = await addAnswer(q.id, text, author, source, confidence);
-                          if (result.error) {
-                            toast.error(result.error);
-                          } else if (result.answer) {
-                            setQuestions((prev) =>
-                              prev.map((question) =>
-                                question.id === q.id
-                                  ? { ...question, answers: [...question.answers, result.answer!] }
-                                  : question
-                              )
-                            );
-                            toast.success("Answer saved!");
-                            setAnsweringId(null);
-                          }
-                        });
+                        handleAddAnswer(q.id, author, text, source, confidence);
                       }}
                       onCancel={() => setAnsweringId(null)}
                     />
