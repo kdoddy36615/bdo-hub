@@ -13,12 +13,11 @@ alter table public.mentor_answers enable row level security;
 
 -- Grant access to roles
 grant select, insert on public.mentor_answers to authenticated;
-grant select on public.mentor_answers to anon;
+grant select, insert on public.mentor_answers to anon;
 
--- Any authenticated user can read all mentor answers
-create policy "Authenticated users can read mentor answers" on public.mentor_answers
-  for select using (auth.uid() is not null);
+-- Open read/write: middleware protects routes, anon key protects API
+create policy "Anyone can read mentor answers" on public.mentor_answers
+  for select using (true);
 
--- Any authenticated user can insert mentor answers
-create policy "Authenticated users can insert mentor answers" on public.mentor_answers
-  for insert with check (auth.uid() is not null);
+create policy "Anyone can insert mentor answers" on public.mentor_answers
+  for insert with check (true);
