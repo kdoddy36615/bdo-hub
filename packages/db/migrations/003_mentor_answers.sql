@@ -11,6 +11,10 @@ create table public.mentor_answers (
 
 alter table public.mentor_answers enable row level security;
 
+-- Grant access to roles
+grant select, insert on public.mentor_answers to authenticated;
+grant select on public.mentor_answers to anon;
+
 -- Any authenticated user can read all mentor answers
 create policy "Authenticated users can read mentor answers" on public.mentor_answers
   for select using (auth.uid() is not null);
