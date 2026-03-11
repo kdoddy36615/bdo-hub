@@ -16,7 +16,7 @@ export const THEMES: ThemeConfig[] = [
     id: "midnight",
     name: "Midnight",
     mode: "dark",
-    preview: { bg: "#1c1c1c", card: "#2a2a2a", primary: "#dedede", accent: "#3a3a3a" },
+    preview: { bg: "#0a0a0a", card: "#161622", primary: "#6366f1", accent: "#222233" },
   },
   {
     id: "crimson",

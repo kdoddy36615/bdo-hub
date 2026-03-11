@@ -363,7 +363,7 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
       {/* Questions */}
       <div className="space-y-4">
         {filteredQuestions.length > 0 ? (
-          filteredQuestions.map((q) => {
+          filteredQuestions.map((q, idx) => {
             const isOpen = expanded === q.id;
             return (
               <div key={q.id} className="group">
@@ -376,69 +376,73 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
                   }`}
                 >
                   {/* Question Header */}
-                  <button
-                    className="w-full text-left p-4 sm:p-5"
-                    onClick={() => setExpanded(isOpen ? null : q.id)}
-                  >
-                    <div className="flex gap-3">
-                      <div className="shrink-0 mt-0.5">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          isOpen ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
-                        }`}>
-                          <MessageCircleQuestion className="h-4 w-4" />
+                  <div className="flex">
+                    <button
+                      className="flex-1 text-left p-4 sm:p-5 min-w-0"
+                      onClick={() => setExpanded(isOpen ? null : q.id)}
+                    >
+                      <div className="flex gap-3">
+                        {/* Question number */}
+                        <div className="shrink-0 mt-0.5">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isOpen ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                          }`}>
+                            {idx + 1}
+                          </div>
                         </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm sm:text-base font-medium leading-snug pr-8">
-                          {q.question}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                          {q.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border cursor-pointer hover:opacity-80 ${
-                                TAG_COLORS[tag] ?? DEFAULT_TAG_COLOR
-                              }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSearchQuery(tag);
-                              }}
-                            >
-                              {tag}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm sm:text-base font-medium leading-snug pr-2">
+                            {q.question}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            {q.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border cursor-pointer hover:opacity-80 ${
+                                  TAG_COLORS[tag] ?? DEFAULT_TAG_COLOR
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSearchQuery(tag);
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            <span className="text-xs text-muted-foreground/60 ml-1">
+                              {q.answers.length} {q.answers.length === 1 ? "reply" : "replies"}
                             </span>
-                          ))}
-                          <span className="text-xs text-muted-foreground/60 ml-1">
-                            {q.answers.length} {q.answers.length === 1 ? "reply" : "replies"}
-                          </span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex items-center">
+                          {isOpen ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          )}
                         </div>
                       </div>
-                      <div className="shrink-0 flex items-center gap-1">
-                        {!q.isStatic && (
-                          <span
-                            className="p-1 rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground/40 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteQuestion(q.id);
-                            }}
-                            role="button"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </span>
-                        )}
-                        {isOpen ? (
-                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        )}
+                    </button>
+
+                    {/* Delete button - always visible on right edge */}
+                    {!q.isStatic && (
+                      <div className="shrink-0 flex items-start pt-4 pr-3 sm:pr-4">
+                        <button
+                          className="p-1.5 rounded-md text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          title="Delete question"
+                          onClick={() => handleDeleteQuestion(q.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                    </div>
-                  </button>
+                    )}
+                  </div>
 
                   {/* Answers Thread */}
                   {isOpen && (
-                    <div className="border-t border-border/50">
+                    <div className="border-t border-border">
                       {q.answers.length > 0 ? (
-                        <div className="divide-y divide-border/30">
+                        <div className="divide-y divide-border">
                           {q.answers.map((a) =>
                             editingAnswer?.id === a.id ? (
                               <div key={a.id} className="p-4 sm:p-5">
@@ -512,7 +516,7 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
                       )}
 
                       {/* Add Answer */}
-                      <div className="border-t border-border/30 p-4 sm:p-5">
+                      <div className="border-t border-border p-4 sm:p-5">
                         {answeringId === q.id ? (
                           <AnswerForm
                             isPending={saving}
@@ -523,7 +527,7 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
                           />
                         ) : (
                           <button
-                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border/60 text-sm text-muted-foreground/60 hover:border-primary/30 hover:text-muted-foreground transition-colors"
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-sm text-muted-foreground/60 hover:border-primary/30 hover:text-muted-foreground transition-colors"
                             onClick={() => setAnsweringId(q.id)}
                           >
                             <Plus className="h-4 w-4" />
