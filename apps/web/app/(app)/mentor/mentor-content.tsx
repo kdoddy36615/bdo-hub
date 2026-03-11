@@ -369,7 +369,7 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
               <div key={q.id} className="group">
                 {/* Question Thread */}
                 <div
-                  className={`rounded-xl border transition-all ${
+                  className={`rounded-xl border bg-card transition-all ${
                     isOpen
                       ? "border-primary/40 shadow-sm shadow-primary/5"
                       : "border-border hover:border-primary/20"
