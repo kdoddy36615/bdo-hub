@@ -349,6 +349,10 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
           as finding a good griefing character. Ideally one that can PvE <span className="italic">and</span> PvP
           so I can get even more practice in while grinding.
         </p>
+        <p className="mt-2">
+          I generally hate large-scale PvP in other games, but I&apos;d be open to trying it in BDO &mdash; just
+          don&apos;t factor it into class/main recommendations or anything else.
+        </p>
       </div>
 
       {/* Add Question Form */}

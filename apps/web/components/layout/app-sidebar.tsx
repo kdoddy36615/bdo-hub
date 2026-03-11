@@ -21,6 +21,8 @@ import {
   FlaskConical,
   Target,
   ListChecks,
+  CheckSquare,
+  Timer,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +39,7 @@ import {
 
 const NAV_ITEMS = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Daily Checklist", href: "/checklist", icon: CheckSquare },
   { title: "Progression", href: "/progression", icon: TrendingUp },
   { title: "Activities", href: "/activities", icon: Clock },
   { title: "Boss Tracker", href: "/bosses", icon: Skull },
@@ -46,6 +49,7 @@ const NAV_ITEMS = [
   { title: "Resources", href: "/resources", icon: Library },
   { title: "Storage", href: "/storage", icon: Archive },
   { title: "Grind Spots", href: "/grind", icon: Crosshair },
+  { title: "Grind Log", href: "/grind-log", icon: Timer },
   { title: "Gathering", href: "/gathering", icon: Pickaxe },
   { title: "News & Events", href: "/news", icon: Newspaper },
   { title: "Buffs & Guides", href: "/buffs", icon: FlaskConical },
