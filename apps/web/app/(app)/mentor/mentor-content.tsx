@@ -19,9 +19,8 @@ import {
   X,
   MessageSquareReply,
   LinkIcon,
-  List,
-  MessageCircle,
-  AlignLeft,
+  Reply,
+  CornerDownRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +34,7 @@ interface DbMentorAnswer {
   answer_text: string;
   source: string;
   confidence: string;
+  parent_answer_id: string | null;
   created_at: string;
 }
 
@@ -52,13 +52,15 @@ interface MentorAnswer {
   text: string;
   source: string;
   confidence: string;
+  parentId: string | null;
+  createdAt: string;
 }
 
 interface StaticQuestion {
   id: string;
   question: string;
   tags: string[];
-  answers: MentorAnswer[];
+  answers: { id: string; author: string; text: string; source: string; confidence: string }[];
 }
 
 interface MentorQuestion {
@@ -115,13 +117,26 @@ const DEFAULT_TAG_COLOR = "bg-zinc-500/15 text-zinc-400 border-zinc-500/30";
 
 const ALL_TAGS = Object.keys(TAG_COLORS);
 
-type ViewStyle = "thread" | "chat" | "minimal";
+/* ---------- Helpers ---------- */
 
-const VIEW_STYLES: { id: ViewStyle; label: string; icon: typeof List }[] = [
-  { id: "thread", label: "Thread", icon: List },
-  { id: "chat", label: "Chat", icon: MessageCircle },
-  { id: "minimal", label: "Minimal", icon: AlignLeft },
-];
+function buildReplyTree(answers: MentorAnswer[]): Map<string | null, MentorAnswer[]> {
+  const tree = new Map<string | null, MentorAnswer[]>();
+  for (const a of answers) {
+    const key = a.parentId;
+    if (!tree.has(key)) tree.set(key, []);
+    tree.get(key)!.push(a);
+  }
+  return tree;
+}
+
+function countAllReplies(tree: Map<string | null, MentorAnswer[]>, parentId: string | null): number {
+  const children = tree.get(parentId) ?? [];
+  let count = children.length;
+  for (const child of children) {
+    count += countAllReplies(tree, child.id);
+  }
+  return count;
+}
 
 /* ---------- Main Component ---------- */
 
@@ -130,21 +145,10 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
   const [dbQuestions, setDbQuestions] = useState<DbQuestion[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [answeringId, setAnsweringId] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ questionId: string; parentAnswerId: string | null } | null>(null);
   const [editingAnswer, setEditingAnswer] = useState<MentorAnswer | null>(null);
   const [addingQuestion, setAddingQuestion] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [viewStyle, setViewStyle] = useState<ViewStyle>("thread");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("qa-view-style") as ViewStyle | null;
-    if (saved && VIEW_STYLES.some((s) => s.id === saved)) setViewStyle(saved);
-  }, []);
-
-  function changeViewStyle(style: ViewStyle) {
-    setViewStyle(style);
-    localStorage.setItem("qa-view-style", style);
-  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -165,7 +169,7 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
   }, []);
 
   const questions: MentorQuestion[] = useMemo(() => {
-    const mapAnswers = (questionKey: string) =>
+    const mapAnswers = (questionKey: string): MentorAnswer[] =>
       dbAnswers
         .filter((a) => a.question_key === questionKey)
         .map((a) => ({
@@ -174,12 +178,17 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
           text: a.answer_text,
           source: a.source,
           confidence: a.confidence,
+          parentId: a.parent_answer_id,
+          createdAt: a.created_at,
         }));
 
     const fromStatic: MentorQuestion[] = staticQuestions.map((q) => ({
       ...q,
       isStatic: true,
-      answers: [...q.answers, ...mapAnswers(q.id)],
+      answers: [
+        ...q.answers.map((a) => ({ ...a, parentId: null, createdAt: "" })),
+        ...mapAnswers(q.id),
+      ],
     }));
 
     const fromDb: MentorQuestion[] = dbQuestions.map((q) => ({
@@ -237,19 +246,26 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
     toast.success("Question deleted");
   }
 
-  async function handleAddAnswer(questionId: string, author: string, text: string, source: string, confidence: string) {
+  async function handleAddAnswer(questionId: string, parentAnswerId: string | null, author: string, text: string, source: string, confidence: string) {
     setSaving(true);
     const supabase = createClient();
     const { data, error } = await supabase
       .from("mentor_answers")
-      .insert({ question_key: questionId, author: author || "Anonymous", answer_text: text, source, confidence })
+      .insert({
+        question_key: questionId,
+        author: author || "Anonymous",
+        answer_text: text,
+        source,
+        confidence,
+        parent_answer_id: parentAnswerId,
+      })
       .select()
       .single();
     setSaving(false);
-    if (error) { toast.error("Failed to save answer"); return; }
+    if (error) { toast.error("Failed to save reply"); return; }
     setDbAnswers((prev) => [...prev, data as DbMentorAnswer]);
-    toast.success("Answer saved!");
-    setAnsweringId(null);
+    toast.success("Reply posted!");
+    setReplyingTo(null);
   }
 
   async function handleEditAnswer(answerId: string, author: string, text: string, source: string, confidence: string) {
@@ -260,24 +276,30 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
       .update({ author: author || "Anonymous", answer_text: text, source, confidence })
       .eq("id", answerId);
     setSaving(false);
-    if (error) { toast.error("Failed to update answer"); return; }
+    if (error) { toast.error("Failed to update reply"); return; }
     setDbAnswers((prev) =>
       prev.map((a) => a.id === answerId ? { ...a, author: author || "Anonymous", answer_text: text, source, confidence } : a)
     );
-    toast.success("Answer updated!");
+    toast.success("Reply updated!");
     setEditingAnswer(null);
   }
 
   async function handleDeleteAnswer(answerId: string) {
     const supabase = createClient();
     const { error } = await supabase.from("mentor_answers").delete().eq("id", answerId);
-    if (error) { toast.error("Failed to delete answer"); return; }
-    setDbAnswers((prev) => prev.filter((a) => a.id !== answerId));
-    toast.success("Answer deleted");
+    if (error) { toast.error("Failed to delete reply"); return; }
+    // Cascade: remove the answer and all its children
+    const toRemove = new Set<string>();
+    function collectChildren(id: string) {
+      toRemove.add(id);
+      for (const a of dbAnswers) {
+        if (a.parent_answer_id === id) collectChildren(a.id);
+      }
+    }
+    collectChildren(answerId);
+    setDbAnswers((prev) => prev.filter((a) => !toRemove.has(a.id)));
+    toast.success("Reply deleted");
   }
-
-  /* ---------- Shared answer rendering props ---------- */
-  const answerActions = { editingAnswer, setEditingAnswer, answeringId, setAnsweringId, saving, handleAddAnswer, handleEditAnswer, handleDeleteAnswer };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -328,34 +350,15 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
         </p>
       </div>
 
-      {/* Style picker + Search */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center rounded-lg border border-border bg-card p-0.5 shrink-0">
-          {VIEW_STYLES.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => changeViewStyle(s.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                viewStyle === s.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              title={s.label}
-            >
-              <s.icon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{s.label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search questions, tags, or answers..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search questions, tags, or answers..."
+          className="pl-9"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       {/* Add Question Form */}
@@ -368,53 +371,96 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
       )}
 
       {/* Questions */}
-      <div className={viewStyle === "minimal" ? "space-y-0 divide-y divide-border" : "space-y-4"}>
+      <div className="space-y-4">
         {filteredQuestions.length > 0 ? (
           filteredQuestions.map((q, idx) => {
             const isOpen = expanded === q.id;
             const toggle = () => setExpanded(isOpen ? null : q.id);
-
-            if (viewStyle === "chat") {
-              return (
-                <ChatQuestion
-                  key={q.id}
-                  q={q}
-                  idx={idx}
-                  isOpen={isOpen}
-                  toggle={toggle}
-                  onDelete={!q.isStatic ? () => handleDeleteQuestion(q.id) : undefined}
-                  onTagClick={setSearchQuery}
-                  {...answerActions}
-                />
-              );
-            }
-
-            if (viewStyle === "minimal") {
-              return (
-                <MinimalQuestion
-                  key={q.id}
-                  q={q}
-                  idx={idx}
-                  isOpen={isOpen}
-                  toggle={toggle}
-                  onDelete={!q.isStatic ? () => handleDeleteQuestion(q.id) : undefined}
-                  onTagClick={setSearchQuery}
-                  {...answerActions}
-                />
-              );
-            }
+            const tree = buildReplyTree(q.answers);
+            const topLevelCount = countAllReplies(tree, null);
 
             return (
-              <ThreadQuestion
-                key={q.id}
-                q={q}
-                idx={idx}
-                isOpen={isOpen}
-                toggle={toggle}
-                onDelete={!q.isStatic ? () => handleDeleteQuestion(q.id) : undefined}
-                onTagClick={setSearchQuery}
-                {...answerActions}
-              />
+              <div key={q.id} className="group">
+                <div className={`rounded-xl border bg-card transition-all ${isOpen ? "border-primary/40 shadow-sm shadow-primary/5" : "border-border hover:border-primary/20"}`}>
+                  {/* Question header */}
+                  <div className="flex">
+                    <button className="flex-1 text-left p-4 sm:p-5 min-w-0" onClick={toggle}>
+                      <div className="flex gap-3">
+                        <div className="shrink-0 mt-0.5">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isOpen ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                            {idx + 1}
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm sm:text-base font-medium leading-snug pr-2">{q.question}</p>
+                          <TagRow tags={q.tags} answerCount={topLevelCount} onTagClick={setSearchQuery} />
+                        </div>
+                        <div className="shrink-0 flex items-center">
+                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </div>
+                    </button>
+                    {!q.isStatic && (
+                      <div className="shrink-0 flex items-start pt-4 pr-3 sm:pr-4">
+                        <button className="p-1.5 rounded-md text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive transition-colors" title="Delete question" onClick={() => handleDeleteQuestion(q.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expanded thread */}
+                  {isOpen && (
+                    <div className="border-t border-border">
+                      {(tree.get(null) ?? []).length > 0 ? (
+                        <div className="p-4 sm:p-5 space-y-0">
+                          {(tree.get(null) ?? []).map((answer) => (
+                            <AnswerThread
+                              key={answer.id}
+                              answer={answer}
+                              tree={tree}
+                              depth={0}
+                              questionId={q.id}
+                              replyingTo={replyingTo}
+                              setReplyingTo={setReplyingTo}
+                              editingAnswer={editingAnswer}
+                              setEditingAnswer={setEditingAnswer}
+                              saving={saving}
+                              onAddReply={handleAddAnswer}
+                              onEdit={handleEditAnswer}
+                              onDelete={handleDeleteAnswer}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="px-5 py-8 text-center">
+                          <MessageSquareReply className="mx-auto h-8 w-8 text-muted-foreground/20 mb-2" />
+                          <p className="text-sm text-muted-foreground/60">No answers yet</p>
+                        </div>
+                      )}
+
+                      {/* Top-level reply */}
+                      <div className="border-t border-border p-4 sm:p-5">
+                        {replyingTo?.questionId === q.id && replyingTo.parentAnswerId === null ? (
+                          <AnswerForm
+                            isPending={saving}
+                            onSubmit={(author, text, source, confidence) => handleAddAnswer(q.id, null, author, text, source, confidence)}
+                            onCancel={() => setReplyingTo(null)}
+                          />
+                        ) : (
+                          <button
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-sm text-muted-foreground/60 hover:border-primary/30 hover:text-muted-foreground transition-colors"
+                            onClick={() => setReplyingTo({ questionId: q.id, parentAnswerId: null })}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Write a reply...
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })
         ) : (
@@ -438,262 +484,146 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
 }
 
 /* ================================================================
-   QUESTION STYLES
+   REDDIT-STYLE THREADED ANSWERS
    ================================================================ */
 
-interface QuestionStyleProps {
-  q: MentorQuestion;
-  idx: number;
-  isOpen: boolean;
-  toggle: () => void;
-  onDelete?: () => void;
-  onTagClick: (tag: string) => void;
+const MAX_NESTING_DEPTH = 5;
+
+function AnswerThread({
+  answer,
+  tree,
+  depth,
+  questionId,
+  replyingTo,
+  setReplyingTo,
+  editingAnswer,
+  setEditingAnswer,
+  saving,
+  onAddReply,
+  onEdit,
+  onDelete,
+}: {
+  answer: MentorAnswer;
+  tree: Map<string | null, MentorAnswer[]>;
+  depth: number;
+  questionId: string;
+  replyingTo: { questionId: string; parentAnswerId: string | null } | null;
+  setReplyingTo: (v: { questionId: string; parentAnswerId: string | null } | null) => void;
   editingAnswer: MentorAnswer | null;
   setEditingAnswer: (a: MentorAnswer | null) => void;
-  answeringId: string | null;
-  setAnsweringId: (id: string | null) => void;
   saving: boolean;
-  handleAddAnswer: (qid: string, author: string, text: string, source: string, confidence: string) => void;
-  handleEditAnswer: (aid: string, author: string, text: string, source: string, confidence: string) => void;
-  handleDeleteAnswer: (aid: string) => void;
-}
+  onAddReply: (qid: string, parentId: string | null, author: string, text: string, source: string, confidence: string) => void;
+  onEdit: (aid: string, author: string, text: string, source: string, confidence: string) => void;
+  onDelete: (aid: string) => void;
+}) {
+  const children = tree.get(answer.id) ?? [];
+  const isReplying = replyingTo?.questionId === questionId && replyingTo?.parentAnswerId === answer.id;
+  const isEditing = editingAnswer?.id === answer.id;
+  const canNest = depth < MAX_NESTING_DEPTH;
 
-/* ---------- Style: Thread (default) ---------- */
-
-function ThreadQuestion({ q, idx, isOpen, toggle, onDelete, onTagClick, ...actions }: QuestionStyleProps) {
   return (
-    <div className="group">
-      <div className={`rounded-xl border bg-card transition-all ${isOpen ? "border-primary/40 shadow-sm shadow-primary/5" : "border-border hover:border-primary/20"}`}>
-        <div className="flex">
-          <button className="flex-1 text-left p-4 sm:p-5 min-w-0" onClick={toggle}>
-            <div className="flex gap-3">
-              <div className="shrink-0 mt-0.5">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isOpen ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-                  {idx + 1}
-                </div>
+    <div className={depth > 0 ? "ml-4 sm:ml-6 border-l-2 border-border/60 pl-3 sm:pl-4" : ""}>
+      <div className="py-3 group/answer">
+        {isEditing ? (
+          <AnswerForm
+            isPending={saving}
+            initial={editingAnswer}
+            onSubmit={(author, text, source, confidence) => onEdit(answer.id, author, text, source, confidence)}
+            onCancel={() => setEditingAnswer(null)}
+          />
+        ) : (
+          <>
+            {/* Author line */}
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold uppercase shrink-0">
+                {answer.author.charAt(0)}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm sm:text-base font-medium leading-snug pr-2">{q.question}</p>
-                <TagRow tags={q.tags} answerCount={q.answers.length} onTagClick={onTagClick} />
-              </div>
-              <div className="shrink-0 flex items-center">
-                {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </div>
-            </div>
-          </button>
-          {onDelete && (
-            <div className="shrink-0 flex items-start pt-4 pr-3 sm:pr-4">
-              <button className="p-1.5 rounded-md text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive transition-colors" title="Delete question" onClick={onDelete}>
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
-        {isOpen && <AnswerSection q={q} {...actions} />}
-      </div>
-    </div>
-  );
-}
-
-/* ---------- Style: Chat ---------- */
-
-function ChatQuestion({ q, idx, isOpen, toggle, onDelete, onTagClick, ...actions }: QuestionStyleProps) {
-  return (
-    <div className="space-y-2">
-      {/* Question bubble - right aligned */}
-      <div className="flex justify-end gap-2">
-        {onDelete && (
-          <button className="self-start mt-2 p-1 rounded text-muted-foreground/30 hover:text-destructive transition-colors" onClick={onDelete}>
-            <Trash2 className="h-3 w-3" />
-          </button>
-        )}
-        <button onClick={toggle} className="text-left max-w-[85%]">
-          <div className={`rounded-2xl rounded-br-sm px-4 py-3 transition-colors ${isOpen ? "bg-primary/20 border border-primary/30" : "bg-primary/10 border border-primary/15 hover:bg-primary/15"}`}>
-            <p className="text-sm font-medium leading-snug">{q.question}</p>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[10px] text-muted-foreground/50">Q{idx + 1}</span>
-              {q.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className={`inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium border cursor-pointer hover:opacity-80 ${TAG_COLORS[tag] ?? DEFAULT_TAG_COLOR}`}
-                  onClick={(e) => { e.stopPropagation(); onTagClick(tag); }}
-                >
-                  {tag}
-                </span>
-              ))}
-              {q.tags.length > 3 && <span className="text-[10px] text-muted-foreground/40">+{q.tags.length - 3}</span>}
-              <span className="text-[10px] text-muted-foreground/40 ml-auto">
-                {q.answers.length} {q.answers.length === 1 ? "reply" : "replies"}
-                {isOpen ? " ^" : " v"}
-              </span>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {/* Answers - left aligned bubbles */}
-      {isOpen && (
-        <div className="space-y-2 pl-2">
-          {q.answers.length > 0 ? (
-            q.answers.map((a) =>
-              actions.editingAnswer?.id === a.id ? (
-                <div key={a.id} className="max-w-[85%] p-3 rounded-xl bg-card border border-border">
-                  <AnswerForm
-                    isPending={actions.saving}
-                    initial={actions.editingAnswer}
-                    onSubmit={(author, text, source, confidence) => actions.handleEditAnswer(a.id, author, text, source, confidence)}
-                    onCancel={() => actions.setEditingAnswer(null)}
-                  />
-                </div>
-              ) : (
-                <div key={a.id} className="flex gap-2 max-w-[85%] group/answer">
-                  <div className="shrink-0 mt-1">
-                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground uppercase">
-                      {a.author.charAt(0)}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl rounded-bl-sm bg-card border border-border px-4 py-2.5 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold">{a.author}</span>
-                      {a.confidence && (
-                        <Badge className={`text-[9px] px-1 py-0 h-4 ${CONFIDENCE_COLORS[a.confidence] ?? ""}`}>
-                          {a.confidence}
-                        </Badge>
-                      )}
-                      {a.source && <span className="text-[10px] text-muted-foreground/50">{a.source}</span>}
-                      <div className="ml-auto flex gap-0.5 opacity-0 group-hover/answer:opacity-100 transition-opacity">
-                        <button className="p-0.5 rounded hover:bg-muted text-muted-foreground/40 hover:text-foreground" onClick={() => actions.setEditingAnswer(a)}>
-                          <Pencil className="h-2.5 w-2.5" />
-                        </button>
-                        <button className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive" onClick={() => actions.handleDeleteAnswer(a.id)}>
-                          <Trash2 className="h-2.5 w-2.5" />
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{a.text}</p>
-                  </div>
-                </div>
-              )
-            )
-          ) : (
-            <p className="text-xs text-muted-foreground/40 pl-9 py-2">No replies yet</p>
-          )}
-
-          {/* Reply input */}
-          <div className="pl-9">
-            {actions.answeringId === q.id ? (
-              <div className="max-w-[85%] p-3 rounded-xl bg-card border border-border">
-                <AnswerForm
-                  isPending={actions.saving}
-                  onSubmit={(author, text, source, confidence) => actions.handleAddAnswer(q.id, author, text, source, confidence)}
-                  onCancel={() => actions.setAnsweringId(null)}
-                />
-              </div>
-            ) : (
-              <button
-                className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                onClick={() => actions.setAnsweringId(q.id)}
-              >
-                + Reply...
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ---------- Style: Minimal ---------- */
-
-function MinimalQuestion({ q, idx, isOpen, toggle, onDelete, onTagClick, ...actions }: QuestionStyleProps) {
-  return (
-    <div className={isOpen ? "bg-card/50" : ""}>
-      <div className="flex items-start gap-3 py-4 px-1 group">
-        <span className="text-xs text-muted-foreground/40 font-mono mt-1 w-6 text-right shrink-0">{idx + 1}.</span>
-        <div className="flex-1 min-w-0">
-          <button onClick={toggle} className="text-left w-full">
-            <p className={`text-sm leading-snug ${isOpen ? "font-semibold" : "font-medium hover:text-primary transition-colors"}`}>
-              {q.question}
-            </p>
-          </button>
-          <div className="flex items-center gap-1.5 mt-1">
-            {q.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-[10px] text-muted-foreground/50 cursor-pointer hover:text-muted-foreground"
-                onClick={() => onTagClick(tag)}
-              >
-                #{tag}
-              </span>
-            ))}
-            <span className="text-[10px] text-muted-foreground/30 ml-2">
-              {q.answers.length}r
-            </span>
-          </div>
-
-          {/* Expanded answers */}
-          {isOpen && (
-            <div className="mt-3 space-y-3 border-l-2 border-primary/20 pl-4">
-              {q.answers.length > 0 ? (
-                q.answers.map((a) =>
-                  actions.editingAnswer?.id === a.id ? (
-                    <div key={a.id}>
-                      <AnswerForm
-                        isPending={actions.saving}
-                        initial={actions.editingAnswer}
-                        onSubmit={(author, text, source, confidence) => actions.handleEditAnswer(a.id, author, text, source, confidence)}
-                        onCancel={() => actions.setEditingAnswer(null)}
-                      />
-                    </div>
-                  ) : (
-                    <div key={a.id} className="group/answer">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="font-semibold">{a.author}</span>
-                        {a.confidence && (
-                          <span className={`px-1 py-0 rounded text-[9px] text-white ${CONFIDENCE_COLORS[a.confidence] ?? ""}`}>{a.confidence}</span>
-                        )}
-                        {a.source && <span className="text-muted-foreground/40">{a.source}</span>}
-                        <div className="ml-auto flex gap-1 opacity-0 group-hover/answer:opacity-100 transition-opacity">
-                          <button className="text-muted-foreground/40 hover:text-foreground" onClick={() => actions.setEditingAnswer(a)}>
-                            <Pencil className="h-2.5 w-2.5" />
-                          </button>
-                          <button className="text-muted-foreground/40 hover:text-destructive" onClick={() => actions.handleDeleteAnswer(a.id)}>
-                            <Trash2 className="h-2.5 w-2.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-line mt-0.5">{a.text}</p>
-                    </div>
-                  )
-                )
-              ) : (
-                <p className="text-xs text-muted-foreground/40">No replies</p>
+              <span className="text-xs font-semibold">{answer.author}</span>
+              {answer.confidence && (
+                <Badge className={`text-[9px] px-1.5 py-0 h-4 ${CONFIDENCE_COLORS[answer.confidence] ?? ""}`}>
+                  <ShieldCheck className="mr-0.5 h-2.5 w-2.5" />
+                  {answer.confidence}
+                </Badge>
               )}
+              {answer.source && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/60">
+                  <LinkIcon className="h-2.5 w-2.5" />
+                  {answer.source}
+                </span>
+              )}
+            </div>
 
-              {actions.answeringId === q.id ? (
-                <AnswerForm
-                  isPending={actions.saving}
-                  onSubmit={(author, text, source, confidence) => actions.handleAddAnswer(q.id, author, text, source, confidence)}
-                  onCancel={() => actions.setAnsweringId(null)}
-                />
-              ) : (
-                <button className="text-xs text-muted-foreground/40 hover:text-muted-foreground" onClick={() => actions.setAnsweringId(q.id)}>
-                  + reply
+            {/* Answer text */}
+            <p className="text-sm leading-relaxed whitespace-pre-line ml-8">{answer.text}</p>
+
+            {/* Action bar */}
+            <div className="flex items-center gap-3 ml-8 mt-1.5">
+              {canNest && (
+                <button
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground/50 hover:text-primary transition-colors"
+                  onClick={() => setReplyingTo({ questionId, parentAnswerId: answer.id })}
+                >
+                  <Reply className="h-3 w-3" />
+                  Reply
                 </button>
               )}
+              <button
+                className="flex items-center gap-1 text-[11px] text-muted-foreground/40 hover:text-foreground transition-colors opacity-0 group-hover/answer:opacity-100"
+                onClick={() => setEditingAnswer(answer)}
+              >
+                <Pencil className="h-2.5 w-2.5" />
+                Edit
+              </button>
+              <button
+                className="flex items-center gap-1 text-[11px] text-muted-foreground/40 hover:text-destructive transition-colors opacity-0 group-hover/answer:opacity-100"
+                onClick={() => onDelete(answer.id)}
+              >
+                <Trash2 className="h-2.5 w-2.5" />
+                Delete
+              </button>
+              {children.length > 0 && (
+                <span className="text-[10px] text-muted-foreground/40 ml-auto">
+                  {children.length} {children.length === 1 ? "reply" : "replies"}
+                </span>
+              )}
             </div>
-          )}
-        </div>
-        {onDelete && (
-          <button
-            className="p-1 rounded text-muted-foreground/20 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          </>
+        )}
+
+        {/* Inline reply form */}
+        {isReplying && (
+          <div className="ml-8 mt-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60 mb-2">
+              <CornerDownRight className="h-3 w-3" />
+              Replying to <span className="font-semibold text-foreground">{answer.author}</span>
+            </div>
+            <AnswerForm
+              isPending={saving}
+              onSubmit={(author, text, source, confidence) => onAddReply(questionId, answer.id, author, text, source, confidence)}
+              onCancel={() => setReplyingTo(null)}
+            />
+          </div>
         )}
       </div>
+
+      {/* Child replies */}
+      {children.map((child) => (
+        <AnswerThread
+          key={child.id}
+          answer={child}
+          tree={tree}
+          depth={canNest ? depth + 1 : depth}
+          questionId={questionId}
+          replyingTo={replyingTo}
+          setReplyingTo={setReplyingTo}
+          editingAnswer={editingAnswer}
+          setEditingAnswer={setEditingAnswer}
+          saving={saving}
+          onAddReply={onAddReply}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      ))}
     </div>
   );
 }
@@ -717,98 +647,6 @@ function TagRow({ tags, answerCount, onTagClick }: { tags: string[]; answerCount
       <span className="text-xs text-muted-foreground/60 ml-1">
         {answerCount} {answerCount === 1 ? "reply" : "replies"}
       </span>
-    </div>
-  );
-}
-
-function AnswerSection({ q, editingAnswer, setEditingAnswer, answeringId, setAnsweringId, saving, handleAddAnswer, handleEditAnswer, handleDeleteAnswer }: {
-  q: MentorQuestion;
-  editingAnswer: MentorAnswer | null;
-  setEditingAnswer: (a: MentorAnswer | null) => void;
-  answeringId: string | null;
-  setAnsweringId: (id: string | null) => void;
-  saving: boolean;
-  handleAddAnswer: (qid: string, author: string, text: string, source: string, confidence: string) => void;
-  handleEditAnswer: (aid: string, author: string, text: string, source: string, confidence: string) => void;
-  handleDeleteAnswer: (aid: string) => void;
-}) {
-  return (
-    <div className="border-t border-border">
-      {q.answers.length > 0 ? (
-        <div className="divide-y divide-border">
-          {q.answers.map((a) =>
-            editingAnswer?.id === a.id ? (
-              <div key={a.id} className="p-4 sm:p-5">
-                <AnswerForm
-                  isPending={saving}
-                  initial={editingAnswer}
-                  onSubmit={(author, text, source, confidence) => handleEditAnswer(a.id, author, text, source, confidence)}
-                  onCancel={() => setEditingAnswer(null)}
-                />
-              </div>
-            ) : (
-              <div key={a.id} className="p-4 sm:p-5 group/answer">
-                <div className="flex gap-3">
-                  <div className="shrink-0">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase">
-                      {a.author.charAt(0)}
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold">{a.author}</span>
-                      {a.confidence && (
-                        <Badge className={`text-[10px] px-1.5 py-0 h-5 ${CONFIDENCE_COLORS[a.confidence] ?? ""}`}>
-                          <ShieldCheck className="mr-0.5 h-2.5 w-2.5" />
-                          {a.confidence}
-                        </Badge>
-                      )}
-                      {a.source && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60">
-                          <LinkIcon className="h-2.5 w-2.5" />
-                          {a.source}
-                        </span>
-                      )}
-                      <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover/answer:opacity-100 transition-opacity">
-                        <button className="p-1 rounded hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors" onClick={() => setEditingAnswer(a)}>
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                        <button className="p-1 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors" onClick={() => handleDeleteAnswer(a.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{a.text}</p>
-                  </div>
-                </div>
-              </div>
-            )
-          )}
-        </div>
-      ) : (
-        <div className="px-5 py-8 text-center">
-          <MessageSquareReply className="mx-auto h-8 w-8 text-muted-foreground/20 mb-2" />
-          <p className="text-sm text-muted-foreground/60">No answers yet</p>
-        </div>
-      )}
-
-      <div className="border-t border-border p-4 sm:p-5">
-        {answeringId === q.id ? (
-          <AnswerForm
-            isPending={saving}
-            onSubmit={(author, text, source, confidence) => handleAddAnswer(q.id, author, text, source, confidence)}
-            onCancel={() => setAnsweringId(null)}
-          />
-        ) : (
-          <button
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-sm text-muted-foreground/60 hover:border-primary/30 hover:text-muted-foreground transition-colors"
-            onClick={() => setAnsweringId(q.id)}
-          >
-            <Plus className="h-4 w-4" />
-            Write a reply...
-          </button>
-        )}
-      </div>
     </div>
   );
 }
@@ -900,13 +738,6 @@ function AnswerForm({ isPending, initial, onSubmit, onCancel }: {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground uppercase">
-          {author ? author.charAt(0) : "?"}
-        </div>
-        <span className="text-sm font-medium text-muted-foreground">{isEdit ? "Editing reply" : "Your reply"}</span>
-      </div>
-
       <textarea
         placeholder="Share your knowledge or experience..."
         value={text}
