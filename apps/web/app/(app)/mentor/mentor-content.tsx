@@ -522,7 +522,7 @@ function AnswerThread({
   const canNest = depth < MAX_NESTING_DEPTH;
 
   return (
-    <div className={depth > 0 ? "ml-4 sm:ml-6 border-l-2 border-border/60 pl-3 sm:pl-4" : ""}>
+    <div className={depth > 0 ? "ml-5 sm:ml-8 border-l-2 border-primary/25 pl-4 sm:pl-5" : ""}>
       <div className="py-3 group/answer">
         {isEditing ? (
           <AnswerForm
