@@ -82,39 +82,39 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-/* Midnight — indigo-tinted dark (matches portfolio aesthetic) */
+/* Midnight — portfolio-matched dark (#0a0a0a bg, #111118 cards, #6366f1 accent) */
 .dark {
-  --background: oklch(0.10 0 0);
-  --foreground: oklch(0.92 0.003 275);
-  --card: oklch(0.165 0.015 275);
-  --card-foreground: oklch(0.92 0.003 275);
-  --popover: oklch(0.165 0.015 275);
-  --popover-foreground: oklch(0.92 0.003 275);
-  --primary: oklch(0.55 0.23 275);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.18 0.012 275);
-  --secondary-foreground: oklch(0.92 0.003 275);
-  --muted: oklch(0.18 0.012 275);
-  --muted-foreground: oklch(0.65 0.02 275);
-  --accent: oklch(0.22 0.018 275);
-  --accent-foreground: oklch(0.92 0.003 275);
+  --background: #0a0a0a;
+  --foreground: #e4e4e7;
+  --card: #111118;
+  --card-foreground: #e4e4e7;
+  --popover: #111118;
+  --popover-foreground: #e4e4e7;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #0e0e16;
+  --secondary-foreground: #e4e4e7;
+  --muted: #0e0e16;
+  --muted-foreground: #a1a1aa;
+  --accent: #1a1a2e;
+  --accent-foreground: #e4e4e7;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.25 0.025 275 / 50%);
-  --input: oklch(0.25 0.025 275 / 60%);
-  --ring: oklch(0.55 0.23 275);
-  --chart-1: oklch(0.55 0.23 275);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.13 0.01 275);
-  --sidebar-foreground: oklch(0.92 0.003 275);
-  --sidebar-primary: oklch(0.55 0.23 275);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.20 0.015 275);
-  --sidebar-accent-foreground: oklch(0.92 0.003 275);
-  --sidebar-border: oklch(0.25 0.025 275 / 50%);
-  --sidebar-ring: oklch(0.55 0.23 275);
+  --border: #222233;
+  --input: #222233;
+  --ring: #6366f1;
+  --chart-1: #6366f1;
+  --chart-2: #818cf8;
+  --chart-3: #06b6d4;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
+  --sidebar: #111118;
+  --sidebar-foreground: #e4e4e7;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1a1a2e;
+  --sidebar-accent-foreground: #e4e4e7;
+  --sidebar-border: #222233;
+  --sidebar-ring: #6366f1;
 }
 
 /* ===== Dark Themes ===== */
