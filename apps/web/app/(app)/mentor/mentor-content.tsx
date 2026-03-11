@@ -340,6 +340,17 @@ export function MentorContent({ questions: staticQuestions }: { questions: Stati
         </Button>
       </div>
 
+      {/* Context blurb */}
+      <div className="rounded-xl border border-border bg-card p-4 sm:p-5 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          <span className="font-semibold text-foreground">My goals:</span>{" "}
+          Ranked Arena of Solare is the main focus &mdash; I come from R1 WoW arena so competitive PvP is the priority.
+          I also want to grief endgame players in open world. Class choice (Ninja vs Kuno) isn&apos;t as important
+          as finding a good griefing character. Ideally one that can PvE <span className="italic">and</span> PvP
+          so I can get even more practice in while grinding.
+        </p>
+      </div>
+
       {/* Add Question Form */}
       {addingQuestion && (
         <QuestionForm
