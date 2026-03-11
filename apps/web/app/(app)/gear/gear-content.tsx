@@ -17,6 +17,7 @@ import {
   Loader2,
   ArrowUp,
   Info,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -90,6 +91,32 @@ const UPGRADE_SUGGESTIONS = [
   "Consider PEN Kharazad Necklace (from TET)",
   "Consider PEN Kharazad Belt (from TET)",
 ];
+
+// Paperdoll grid positions (7-col x 5-row grid)
+const PAPERDOLL_POSITIONS: Record<string, { row: number; col: number }> = {
+  mainhand:  { row: 1, col: 2 },
+  helmet:    { row: 1, col: 4 },
+  subweapon: { row: 1, col: 6 },
+  earring1:  { row: 2, col: 1 },
+  chest:     { row: 2, col: 4 },
+  necklace:  { row: 2, col: 7 },
+  earring2:  { row: 3, col: 1 },
+  gloves:    { row: 3, col: 3 },
+  ring1:     { row: 3, col: 6 },
+  belt:      { row: 4, col: 4 },
+  ring2:     { row: 4, col: 7 },
+  awakening: { row: 5, col: 1 },
+  shoes:     { row: 5, col: 3 },
+  artifact:  { row: 5, col: 6 },
+};
+
+const GRADE_SLOT_BORDER: Record<number, string> = {
+  0: "border-zinc-600",
+  1: "border-green-500",
+  2: "border-blue-500",
+  3: "border-yellow-500",
+  4: "border-orange-500",
+};
 
 export function GearContent() {
   const [slots, setSlots] = useState<GearSlot[]>([]);
@@ -185,16 +212,23 @@ export function GearContent() {
         <p className="text-muted-foreground">Maegu &mdash; Track and plan your gear progression</p>
       </div>
 
-      {/* Total Stats Banner */}
-      <Card className="bg-muted/30">
-        <CardContent className="flex flex-wrap items-center justify-center gap-6 py-5">
-          <StatBox label="AP" value={totalStats.ap} color="text-red-400" />
-          <div className="text-muted-foreground/40 text-2xl font-light">/</div>
-          <StatBox label="AAP" value={totalStats.aap} color="text-red-300" />
-          <div className="text-muted-foreground/40 text-2xl font-light">/</div>
-          <StatBox label="DP" value={totalStats.dp} color="text-blue-400" />
-        </CardContent>
-      </Card>
+      {/* Paperdoll + Stats Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+        <GearPaperdoll
+          slotMap={slotMap}
+          totalStats={totalStats}
+          onSlotClick={(slotKey) => {
+            setEditingSlot(slotKey);
+            setTimeout(() => {
+              document.getElementById(`gear-slot-${slotKey}`)?.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }, 100);
+          }}
+        />
+        <GearStatsPanel slots={slots} totalStats={totalStats} />
+      </div>
 
       {/* Gear Groups */}
       {SLOT_GROUPS.map((group) => (
@@ -206,25 +240,29 @@ export function GearContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {group.slots.map((slotKey) => {
               const slot = slotMap[slotKey];
-              if (editingSlot === slotKey) {
-                return (
-                  <GearEditCard
-                    key={slotKey}
-                    slotKey={slotKey}
-                    slot={slot}
-                    saving={saving}
-                    onSave={handleSave}
-                    onCancel={() => setEditingSlot(null)}
-                  />
-                );
-              }
+              const isEditing = editingSlot === slotKey;
               return (
-                <GearCard
+                <div
                   key={slotKey}
-                  slotKey={slotKey}
-                  slot={slot}
-                  onEdit={() => setEditingSlot(slotKey)}
-                />
+                  id={`gear-slot-${slotKey}`}
+                  className={isEditing ? "col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4" : ""}
+                >
+                  {isEditing ? (
+                    <GearEditCard
+                      slotKey={slotKey}
+                      slot={slot}
+                      saving={saving}
+                      onSave={handleSave}
+                      onCancel={() => setEditingSlot(null)}
+                    />
+                  ) : (
+                    <GearCard
+                      slotKey={slotKey}
+                      slot={slot}
+                      onEdit={() => setEditingSlot(slotKey)}
+                    />
+                  )}
+                </div>
               );
             })}
           </div>
@@ -255,19 +293,244 @@ export function GearContent() {
   );
 }
 
-function StatBox({
+/* ---------- Paperdoll ---------- */
+
+function GearPaperdoll({
+  slotMap,
+  totalStats,
+  onSlotClick,
+}: {
+  slotMap: Record<string, GearSlot>;
+  totalStats: { ap: number; aap: number; dp: number };
+  onSlotClick: (slotKey: string) => void;
+}) {
+  const score = Math.floor((totalStats.ap + totalStats.aap) / 2) + totalStats.dp;
+
+  return (
+    <Card>
+      <CardContent className="p-4 sm:p-6">
+        {/* Paperdoll Grid */}
+        <div className="overflow-x-auto">
+          <div
+            className="grid place-items-center mx-auto w-fit gap-1.5 sm:gap-2"
+            style={{
+              gridTemplateColumns: "repeat(7, 48px)",
+              gridTemplateRows: "repeat(5, 48px)",
+            }}
+          >
+            {/* Center decorative element */}
+            <div
+              className="flex items-center justify-center opacity-[0.07]"
+              style={{ gridRow: 3, gridColumn: 4 }}
+            >
+              <Shield className="h-10 w-10" />
+            </div>
+
+            {/* Connecting lines - SVG overlay */}
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.08]"
+              style={{ gridRow: "1 / -1", gridColumn: "1 / -1" }}
+            >
+              {/* Lines from center (col4, row3) to each slot */}
+              {Object.entries(PAPERDOLL_POSITIONS).map(([key, pos]) => {
+                const cx = (4 - 1) * 54 + 24;
+                const cy = (3 - 1) * 54 + 24;
+                const sx = (pos.col - 1) * 54 + 24;
+                const sy = (pos.row - 1) * 54 + 24;
+                return (
+                  <line
+                    key={key}
+                    x1={cx}
+                    y1={cy}
+                    x2={sx}
+                    y2={sy}
+                    stroke="currentColor"
+                    strokeWidth="1"
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Gear Slots */}
+            {Object.keys(PAPERDOLL_POSITIONS).map((slotKey) => (
+              <PaperdollSlot
+                key={slotKey}
+                slotKey={slotKey}
+                slot={slotMap[slotKey]}
+                onClick={() => onSlotClick(slotKey)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* AP / AAP / DP / SCORE Summary */}
+        <div className="flex items-center justify-center gap-6 sm:gap-8 mt-6 pt-4 border-t border-border/50">
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">AP</div>
+            <div className="text-2xl font-bold tabular-nums text-red-400">{totalStats.ap}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">AAP</div>
+            <div className="text-2xl font-bold tabular-nums text-red-300">{totalStats.aap}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">DP</div>
+            <div className="text-2xl font-bold tabular-nums text-blue-400">{totalStats.dp}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Score</div>
+            <div className="text-2xl font-bold tabular-nums">{score}</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PaperdollSlot({
+  slotKey,
+  slot,
+  onClick,
+}: {
+  slotKey: string;
+  slot?: GearSlot;
+  onClick: () => void;
+}) {
+  const grade = slot?.item_grade ?? 0;
+  const borderColor = GRADE_SLOT_BORDER[grade] ?? GRADE_SLOT_BORDER[0];
+  const enhColor = slot?.enhancement
+    ? ENHANCEMENT_COLORS[slot.enhancement] ?? "text-zinc-400"
+    : "";
+  const label = SLOT_LABELS[slotKey] ?? slotKey;
+  const pos = PAPERDOLL_POSITIONS[slotKey];
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-12 h-12 rounded-md border-2 ${borderColor} bg-card flex flex-col items-center justify-center gap-0.5 transition-all hover:scale-110 hover:brightness-125 cursor-pointer relative z-10`}
+      style={{ gridRow: pos.row, gridColumn: pos.col }}
+      title={`${label}: ${slot?.enhancement ? slot.enhancement + " " : ""}${slot?.item_name ?? "Empty"}`}
+    >
+      {slot?.enhancement ? (
+        <>
+          <span className={`text-[10px] font-bold leading-none ${enhColor}`}>
+            {slot.enhancement}
+          </span>
+          <span className="text-[7px] text-muted-foreground leading-none truncate max-w-[40px]">
+            {slot.item_name.split(" ").slice(-1)[0]}
+          </span>
+        </>
+      ) : (
+        <span className="text-[9px] text-muted-foreground/60 font-medium leading-tight text-center">
+          {label}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/* ---------- Stats Panel ---------- */
+
+function GearStatsPanel({
+  slots,
+  totalStats,
+}: {
+  slots: GearSlot[];
+  totalStats: { ap: number; aap: number; dp: number };
+}) {
+  const detailedStats = useMemo(() => {
+    const result = {
+      accuracy: 0,
+      evasion: 0,
+      dr: 0,
+      weaponAp: 0,
+      weaponAap: 0,
+      armorDp: 0,
+      accAp: 0,
+      accAap: 0,
+      accDp: 0,
+    };
+
+    const weaponSlots = ["mainhand", "subweapon", "awakening"];
+    const armorSlots = ["helmet", "chest", "gloves", "shoes"];
+
+    for (const s of slots) {
+      result.accuracy += s.accuracy;
+      result.evasion += s.evasion;
+      result.dr += s.dr;
+
+      if (weaponSlots.includes(s.slot_key)) {
+        result.weaponAp += s.ap;
+        result.weaponAap += s.aap;
+      } else if (armorSlots.includes(s.slot_key)) {
+        result.armorDp += s.dp;
+      } else {
+        result.accAp += s.ap;
+        result.accAap += s.aap;
+        result.accDp += s.dp;
+      }
+    }
+    return result;
+  }, [slots]);
+
+  return (
+    <Card className="h-fit">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <BarChart3 className="h-4 w-4" />
+          Stats
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        {/* Offense */}
+        <div>
+          <h3 className="font-semibold text-muted-foreground mb-2 text-xs uppercase tracking-wider">
+            Offense
+          </h3>
+          <div className="space-y-1.5">
+            <StatRow label="Total AP" value={totalStats.ap} color="text-red-400" />
+            <StatRow label="Total AAP" value={totalStats.aap} color="text-red-300" />
+            <StatRow label="Weapon AP" value={detailedStats.weaponAp} color="text-red-400/70" sub />
+            <StatRow label="Weapon AAP" value={detailedStats.weaponAap} color="text-red-300/70" sub />
+            <StatRow label="Accessory AP" value={detailedStats.accAp} color="text-red-400/70" sub />
+            <StatRow label="Accessory AAP" value={detailedStats.accAap} color="text-red-300/70" sub />
+            <StatRow label="Accuracy" value={detailedStats.accuracy} color="text-emerald-400" />
+          </div>
+        </div>
+
+        {/* Defense */}
+        <div>
+          <h3 className="font-semibold text-muted-foreground mb-2 text-xs uppercase tracking-wider">
+            Defense
+          </h3>
+          <div className="space-y-1.5">
+            <StatRow label="Total DP" value={totalStats.dp} color="text-blue-400" />
+            <StatRow label="Armor DP" value={detailedStats.armorDp} color="text-blue-400/70" sub />
+            <StatRow label="Accessory DP" value={detailedStats.accDp} color="text-blue-400/70" sub />
+            <StatRow label="Damage Reduction" value={detailedStats.dr} color="text-cyan-400" />
+            <StatRow label="Evasion" value={detailedStats.evasion} color="text-purple-400" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function StatRow({
   label,
   value,
   color,
+  sub,
 }: {
   label: string;
   value: number;
   color: string;
+  sub?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center">
-      <span className={`text-3xl font-bold tabular-nums ${color}`}>{value}</span>
-      <span className="text-xs text-muted-foreground uppercase tracking-wider">{label}</span>
+    <div className={`flex items-center justify-between ${sub ? "pl-3 opacity-75" : ""}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-bold tabular-nums ${color}`}>{value}</span>
     </div>
   );
 }
@@ -386,7 +649,7 @@ function GearEditCard({
   const gradeLabels = ["White", "Green", "Blue", "Yellow", "Orange"];
 
   return (
-    <Card className="border-l-4 border-l-primary col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+    <Card className="border-l-4 border-l-primary">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">
