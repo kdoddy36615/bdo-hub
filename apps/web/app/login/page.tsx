@@ -60,7 +60,7 @@ export default function LoginPage() {
         <CardContent>
           {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
             <div className="mb-6 space-y-3 border-b pb-6">
-              <Button type="button" className="w-full min-h-11" disabled={loading} onClick={handleDemo}>
+              <Button type="button" className="w-full min-h-11 bg-indigo-600 text-white hover:bg-indigo-700" disabled={loading} onClick={handleDemo}>
                 {loading ? "Starting..." : "Try a private demo"}
               </Button>
               <p className="text-sm text-muted-foreground">No email needed. Start with sample data in your own cloud workspace. Your demo is tied to this browser session; clearing browser data loses access.</p>
@@ -90,13 +90,13 @@ export default function LoginPage() {
             {error && (
               <p role="alert" className="text-sm text-destructive">{error}</p>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full bg-indigo-600 text-white hover:bg-indigo-700" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary hover:underline">
+            <Link href="/signup" className="text-foreground underline underline-offset-4">
               Sign up
             </Link>
           </p>
