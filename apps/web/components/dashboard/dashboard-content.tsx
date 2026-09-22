@@ -271,7 +271,7 @@ export function DashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{progressPct}%</div>
-            <Progress value={progressPct} className="mt-2" />
+            <Progress aria-label="Progression complete" value={progressPct} className="mt-2" />
             <p className="mt-1 text-xs text-muted-foreground">
               {completedItems}/{totalItems} items complete
             </p>
@@ -363,6 +363,7 @@ export function DashboardContent() {
                       className="flex items-center gap-3 rounded-lg border p-3"
                     >
                       <Checkbox
+                        aria-label={activity.name}
                         checked={completed}
                         disabled={loadingActivityId === activity.id}
                         onCheckedChange={() => handleToggleActivity(activity)}

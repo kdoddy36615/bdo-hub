@@ -37,26 +37,8 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Auto-sign in if no session and credentials are configured
-  if (!user && process.env.AUTO_LOGIN_EMAIL && process.env.AUTO_LOGIN_PASSWORD) {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: process.env.AUTO_LOGIN_EMAIL,
-      password: process.env.AUTO_LOGIN_PASSWORD,
-    });
-
-    if (!error) {
-      // Redirect to the same page so the browser makes a new request
-      // with the session cookies, allowing server components to read them.
-      const redirect = NextResponse.redirect(request.nextUrl.clone());
-      cookiesToForward.forEach(({ name, value, options }) => {
-        redirect.cookies.set(name, value, options);
-      });
-      return redirect;
-    }
-  }
-
-  // If still no user and no auto-login, redirect to login page
-  if (!user && !process.env.AUTO_LOGIN_EMAIL) {
+  // Every visitor must have their own session; never share a demo password.
+  if (!user) {
     const isAuthPage =
       request.nextUrl.pathname.startsWith("/login") ||
       request.nextUrl.pathname.startsWith("/signup");
@@ -64,7 +46,9 @@ export async function updateSession(request: NextRequest) {
     if (!isAuthPage) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
-      return NextResponse.redirect(url);
+      const redirect = NextResponse.redirect(url);
+      cookiesToForward.forEach(({ name, value, options }) => redirect.cookies.set(name, value, options));
+      return redirect;
     }
   }
 

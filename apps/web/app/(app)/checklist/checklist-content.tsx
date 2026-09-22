@@ -358,7 +358,7 @@ export function ChecklistContent() {
               {Math.round(progressPercent)}%
             </span>
           </div>
-          <Progress value={progressPercent} />
+          <Progress aria-label="Daily checklist complete" value={progressPercent} />
         </CardContent>
       </Card>
 

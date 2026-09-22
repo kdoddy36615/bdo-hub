@@ -19,6 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">
+          {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && <p className="mx-auto mb-4 max-w-6xl rounded-md border px-3 py-2 text-sm text-muted-foreground">Private demo workspace. Sample data is illustrative; your edits are saved to this browser session&apos;s account.</p>}
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>
       </SidebarInset>
